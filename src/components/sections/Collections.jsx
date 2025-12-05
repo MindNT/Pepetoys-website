@@ -1,10 +1,19 @@
 import React from 'react';
 import CollectionCard from '../common/CollectionCard';
-import { collections } from '../../data/mockData';
 import { COLLECTIONS_TITLE } from '../../constants';
 import BirdIcon from '../icons/BirdIcon';
 
+const BASE_URL = import.meta.env.BASE_URL;
+
 const Collections = () => {
+  const collections = [
+    { id: 1, name: 'Voladeras', image: `${BASE_URL}77ff67b37e5c7e80d2b273048467c66a82be04b2.jpg` },
+    { id: 2, name: 'Voladeras', image: `${BASE_URL}77ff67b37e5c7e80d2b273048467c66a82be04b2.jpg` },
+    { id: 3, name: 'Voladeras', image: `${BASE_URL}77ff67b37e5c7e80d2b273048467c66a82be04b2.jpg` },
+    { id: 4, name: 'Voladeras', image: `${BASE_URL}77ff67b37e5c7e80d2b273048467c66a82be04b2.jpg` },
+    { id: 5, name: 'Voladeras', image: `${BASE_URL}77ff67b37e5c7e80d2b273048467c66a82be04b2.jpg` },
+  ];
+
   return (
     <section className="pt-12 pb-16 bg-white overflow-hidden">
       {/* Section Title */}

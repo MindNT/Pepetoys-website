@@ -8,7 +8,7 @@ const Hero = () => {
       <div 
         className="absolute inset-0 w-full h-full bg-cover bg-center"
         style={{ 
-          backgroundImage: 'url(/77ff67b37e5c7e80d2b273048467c66a82be04b2.jpg)',
+          backgroundImage: `url(${import.meta.env.BASE_URL}77ff67b37e5c7e80d2b273048467c66a82be04b2.jpg)`,
         }}
       />
       
@@ -24,7 +24,7 @@ const Hero = () => {
         {/* Logo Grande - IZQUIERDA (Hidden on mobile) */}
         <div className="hidden md:block flex-shrink-0 mt-[30px]">
           <img 
-            src="/9a56523df5887e32ef435d833bbd7b4e5b4f94e4.png"
+            src={`${import.meta.env.BASE_URL}9a56523df5887e32ef435d833bbd7b4e5b4f94e4.png`}
             alt="Pepe's Toys Logo"
             className="w-[250px] h-[220px] object-contain"
           />

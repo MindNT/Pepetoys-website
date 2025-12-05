@@ -4,7 +4,7 @@ import React from 'react';
 const BirdIcon = () => (
   <div className="w-[50px] h-[50px] flex items-center justify-center opacity-100">
     <img 
-      src="/bird-icon.png" 
+      src={`${import.meta.env.BASE_URL}bird-icon.png`}
       alt="Bird Icon" 
       className="w-full h-full object-contain"
       onError={(e) => {
