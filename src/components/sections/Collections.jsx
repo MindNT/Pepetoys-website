@@ -12,7 +12,7 @@ const Collections = () => {
   const collections = Array.from({ length: 25 }, (_, i) => ({
     id: i + 1,
     name: `Categoría ${i + 1}`,
-    image: `${BASE_URL}77ff67b37e5c7e80d2b273048467c66a82be04b2.jpg`
+    image: `${BASE_URL}da9333aea433f87cb618d778f1e3b8f8885f7f08.jpg`
   }));
 
   const scroll = (direction) => {
