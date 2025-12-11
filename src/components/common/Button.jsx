@@ -1,16 +1,17 @@
 import React from 'react';
 
-const Button = ({ 
-  children, 
-  variant = 'primary', 
-  icon: Icon, 
-  onClick, 
-  className = '' 
+const Button = ({
+  children,
+  variant = 'primary',
+  icon: Icon,
+  onClick,
+  className = ''
 }) => {
   const variants = {
     primary: 'bg-[#008F24] hover:bg-[#007520] text-white',
     magenta: 'bg-[#A41262] hover:bg-[#8a1050] text-white w-[136px]',
     whatsapp: 'bg-[#008F24] hover:bg-[#007520] text-white w-[137px]',
+    contact: 'bg-[#008F24] hover:bg-[#007520] text-white w-[137px]',
   };
 
   return (

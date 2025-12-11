@@ -27,19 +27,34 @@ const Collections = () => {
   };
 
   return (
-    <section className="pt-12 pb-4 bg-white overflow-hidden">{/* Reduced pb-16 to pb-4 */}
+    <section className="pt-12 pb-4 bg-white overflow-hidden">
       {/* Section Title */}
-      <div className="max-w-[1440px] mx-auto flex items-center gap-3 mb-10 pl-4 md:pl-[108px]">
-        <div className="w-[50px] h-[50px]">
+      <div className="max-w-[1440px] mx-auto flex items-center gap-3 mb-6 md:mb-10 pl-4 md:pl-[108px]">
+        <div className="w-[40px] h-[40px] md:w-[50px] md:h-[50px]">
           <BirdIcon />
         </div>
-        <h3 className="text-xl md:text-2xl font-normal text-[#EE193F]">
+        <h3 className="text-lg md:text-2xl font-normal text-[#EE193F]">
           {COLLECTIONS_TITLE}
         </h3>
       </div>
 
-      {/* Carousel with 5 visible cards centered, arrows in side margins */}
-      <div className="w-full max-w-[1440px] mx-auto relative flex items-center justify-center">
+      {/* Mobile: 2-column grid */}
+      <div className="md:hidden px-4">
+        <div className="grid grid-cols-2 gap-4">
+          {collections.map((collection) => (
+            <div key={collection.id} className="flex justify-center">
+              <CollectionCard
+                name={collection.name}
+                image={collection.image}
+                mobile={true}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop: Carousel with 5 visible cards centered, arrows in side margins */}
+      <div className="hidden md:flex w-full max-w-[1440px] mx-auto relative items-center justify-center">
         {/* Left Arrow - In left margin */}
         <button
           onClick={() => scroll('left')}
