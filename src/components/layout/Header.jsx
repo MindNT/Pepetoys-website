@@ -6,38 +6,40 @@ import Button from '../common/Button';
 
 const NAV_ITEMS = ['LOROS', 'ALIMENTOS', 'JUGUETES', 'AVIARIOS'];
 
-const Header = () => {
+const Header = ({ simple = false }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <>
-      <header className="absolute top-0 left-0 right-0 z-50 bg-black/60 border-b border-gray-500/50 h-[60px] md:h-[98px]">
+      <header className={`absolute top-0 left-0 right-0 z-50 h-[60px] md:h-[98px] transition-all ${simple ? 'bg-transparent border-none' : 'bg-black/60 border-b border-gray-500/50'}`}>
         <div className="max-w-[1440px] mx-auto h-full relative">
           <div className="flex items-center justify-between h-full px-4 md:px-6 lg:px-[122px]">
 
             {/* Mobile Hamburger Menu - LEFT */}
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden text-white p-2"
+              className={`text-white p-2 ${simple ? '' : 'lg:hidden'}`}
               aria-label="Abrir menú"
             >
               <Menu size={24} />
             </button>
 
             {/* Navigation - LEFT (Desktop) */}
-            <nav className="hidden lg:flex items-center gap-[70px]">
-              {NAV_ITEMS.map((item, index) => (
-                <span
-                  key={index}
-                  className="text-white font-normal text-base cursor-pointer hover:text-green-400 transition-colors"
-                >
-                  {item}
-                </span>
-              ))}
-            </nav>
+            {!simple && (
+              <nav className="hidden lg:flex items-center gap-[70px]">
+                {NAV_ITEMS.map((item, index) => (
+                  <span
+                    key={index}
+                    className="text-white font-normal text-base cursor-pointer hover:text-green-400 transition-colors"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </nav>
+            )}
 
             {/* Spacer for mobile to center buttons */}
-            <div className="lg:hidden flex-1"></div>
+            <div className={simple ? 'hidden' : 'lg:hidden flex-1'}></div>
 
             {/* Actions - RIGHT - Desktop */}
             <div className="hidden lg:flex items-center gap-[42px] absolute right-[81px] top-[31px]">

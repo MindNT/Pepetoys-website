@@ -10,7 +10,7 @@ const ArrowIcon = () => (
   </svg>
 );
 
-const CollectionCard = ({ name, image, mobile = false }) => {
+const CollectionCard = ({ name, image, mobile = false, onClick }) => {
   const cardSize = mobile ? 'w-[160px] h-[160px]' : 'w-[225px] h-[225px]';
   const containerWidth = mobile ? 'w-[160px]' : 'w-[225px]';
   const labelWidth = mobile ? 'w-[125px]' : 'w-[176px]';
@@ -18,7 +18,7 @@ const CollectionCard = ({ name, image, mobile = false }) => {
   const fontSize = mobile ? 'text-sm' : 'text-base';
 
   return (
-    <div className="group cursor-pointer relative">
+    <div className="group cursor-pointer relative" onClick={onClick ? onClick : undefined}>
       {/* Image Container */}
       <div className={`relative ${cardSize} mb-3 md:mb-4`}>
         {/* Background Image */}
