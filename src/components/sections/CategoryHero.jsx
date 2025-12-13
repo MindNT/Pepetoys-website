@@ -2,6 +2,8 @@ import React from 'react';
 import Button from '../common/Button';
 import { MessageCircle } from 'lucide-react';
 
+import heroVideo from '../../assets/hero-video.mp4';
+
 const CategoryHero = () => {
     // Assets from public folder
     const bgImage = `${import.meta.env.BASE_URL}77ff67b37e5c7e80d2b273048467c66a82be04b2.jpg`;
@@ -9,13 +11,22 @@ const CategoryHero = () => {
 
     return (
         <section className="relative h-[350px] md:h-[407px] w-full overflow-hidden bg-gray-900 mt-0">
-            {/* Background Image */}
-            <div
-                className="absolute inset-0 w-full h-full bg-cover bg-center"
-                style={{
-                    backgroundImage: `url(${bgImage})`,
-                }}
-            />
+            {/* Background Video */}
+            <div className="absolute inset-0 w-full h-full overflow-hidden">
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    poster={bgImage}
+                    className="w-full h-full object-cover object-top"
+                >
+                    <source src={heroVideo} type="video/mp4" />
+                    Tu navegador no soporta el tag de video.
+                </video>
+                {/* Overlay to ensure text readability - slightly lighter for internal page if needed, but keeping consistent */}
+                <div className="absolute inset-0 bg-black/30" />
+            </div>
 
             {/* Dark overlay on bottom section - Desktop */}
             <div className="hidden md:block absolute left-0 right-0 top-0 bottom-0 bg-black/60" />

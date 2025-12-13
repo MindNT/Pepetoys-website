@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { getItemsDay, getItemData } from '../../services/api';
 import Header from '../layout/Header';
 import Footer from '../layout/Footer';
 import ProductModal from '../common/ProductModal';
@@ -10,9 +11,13 @@ const CategoryPage = () => {
     const { id } = useParams();
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [modalLoading, setModalLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     // Mock Data based on ID (simplified for demo)
-    const categoryName = "AVES CHICAS Y MEDIANAS";
+    const categoryName = `Categoría ${id}`;
     const subCategories = [
         "Aves Grandes y Jumbo",
         "Parches",
@@ -21,17 +26,53 @@ const CategoryPage = () => {
         "Kit inicio"
     ];
 
-    const products = Array.from({ length: 3 }).map((_, i) => ({
-        id: i + 1,
-        name: "Casa de madera",
-        price: "$12 MXN",
-        description: "Refugio natural y seguro, fabricado en madera no tóxica, diseñado para ofrecer a tu loro un espacio cómodo donde descansar, jugar y sentirse protegido. Ideal para enriquecer su entorno y estimular su instinto de anidación.",
-        image: `${import.meta.env.BASE_URL}shopping.jpg`
-    }));
+    React.useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                setLoading(true);
+                const data = await getItemsDay();
 
-    const handleOpenModal = (product) => {
-        setSelectedProduct(product);
+                // API response structure is { status: "success", data: [...] }
+                const items = data.data || [];
+
+                // Filter items by category_id present in the URL
+                const fileteredItems = items.filter(item => item.category_id === Number(id));
+
+                const mappedProducts = fileteredItems.map(item => ({
+                    id: item.id,
+                    name: item.Nombre || "Producto sin nombre", // API uses "Nombre"
+                    price: item.price ? `$${item.price} MXN` : "Precio no disponible",
+                    description: item.description || "Sin descripción",
+                    // Use img_item if available, otherwise fallback
+                    image: item.img_item || `${import.meta.env.BASE_URL}shopping.jpg`
+                }));
+                setProducts(mappedProducts);
+            } catch (err) {
+                console.error("Error fetching products:", err);
+                setError("No se pudieron cargar los productos.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, [id]);
+
+    const handleOpenModal = async (product) => {
         setIsModalOpen(true);
+        setSelectedProduct(product); // Show basic info immediately
+        setModalLoading(true);
+
+        try {
+            const response = await getItemData(product.id);
+            if (response.status === 'success' && response.data) {
+                setSelectedProduct(prev => ({ ...prev, ...response.data }));
+            }
+        } catch (error) {
+            console.error("Error fetching product details:", error);
+        } finally {
+            setModalLoading(false);
+        }
     };
 
     const handleCloseModal = () => {
@@ -88,35 +129,49 @@ const CategoryPage = () => {
 
                     {/* Product Grid */}
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-                        {products.map((product) => (
-                            <div key={product.id} className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center group">
-                                {/* Product Image */}
-                                <div className="w-full aspect-square mb-6 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center relative">
-                                    <div className="absolute inset-0 bg-gray-100 animate-pulse hidden" /> {/* Loading state placeholder */}
-                                    <img
-                                        src={product.image}
-                                        alt={product.name}
-                                        className="w-[80%] h-[80%] object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                                    />
-                                </div>
-
-                                {/* Content */}
-                                <h3 className="font-bold text-lg text-gray-800 mb-2">{product.name}</h3>
-                                <p className="text-gray-500 text-xs leading-relaxed line-clamp-3 mb-4 max-w-[250px]">
-                                    {product.description}
-                                </p>
-
-                                <div className="mt-auto w-full flex items-center justify-between px-2">
-                                    <span className="text-lg font-bold text-gray-900">{product.price}</span>
-                                    <button
-                                        onClick={() => handleOpenModal(product)}
-                                        className="bg-brand-green hover:bg-brand-green-dark text-white text-xs font-semibold py-2 px-6 rounded-full transition-colors shadow-sm hover:shadow-md"
-                                    >
-                                        Detalles
-                                    </button>
-                                </div>
+                        {loading ? (
+                            <div className="col-span-full h-64 flex items-center justify-center">
+                                <div className="text-xl text-brand-green animate-pulse">Cargando productos...</div>
                             </div>
-                        ))}
+                        ) : error ? (
+                            <div className="col-span-full h-64 flex items-center justify-center">
+                                <div className="text-red-500">{error}</div>
+                            </div>
+                        ) : products.length === 0 ? (
+                            <div className="col-span-full h-64 flex items-center justify-center">
+                                <div className="text-gray-500">No hay productos disponibles para este día.</div>
+                            </div>
+                        ) : (
+                            products.map((product) => (
+                                <div key={product.id} className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center group">
+                                    {/* Product Image */}
+                                    <div className="w-full aspect-square mb-6 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center relative">
+                                        <div className="absolute inset-0 bg-gray-100 animate-pulse hidden" /> {/* Loading state placeholder */}
+                                        <img
+                                            src={product.image}
+                                            alt={product.name}
+                                            className="w-[80%] h-[80%] object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
+                                        />
+                                    </div>
+
+                                    {/* Content */}
+                                    <h3 className="font-bold text-lg text-gray-800 mb-2">{product.name}</h3>
+                                    <p className="text-gray-500 text-xs leading-relaxed line-clamp-3 mb-4 max-w-[250px]">
+                                        {product.description}
+                                    </p>
+
+                                    <div className="mt-auto w-full flex items-center justify-between px-2">
+                                        <span className="text-lg font-bold text-gray-900">{product.price}</span>
+                                        <button
+                                            onClick={() => handleOpenModal(product)}
+                                            className="bg-brand-green hover:bg-brand-green-dark text-white text-xs font-semibold py-2 px-6 rounded-full transition-colors shadow-sm hover:shadow-md"
+                                        >
+                                            Detalles
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             </main>
@@ -127,6 +182,7 @@ const CategoryPage = () => {
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
                 product={selectedProduct}
+                loading={modalLoading}
             />
         </div>
     );

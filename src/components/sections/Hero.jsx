@@ -1,16 +1,27 @@
 import React from 'react';
 import Button from '../common/Button';
 
+import heroVideo from '../../assets/hero-video.mp4';
+
 const Hero = () => {
   return (
     <section className="relative h-[500px] md:h-[407px] w-full overflow-hidden bg-gray-900">
-      {/* Background Image */}
-      <div
-        className="absolute inset-0 w-full h-full bg-cover bg-center"
-        style={{
-          backgroundImage: `url(${import.meta.env.BASE_URL}77ff67b37e5c7e80d2b273048467c66a82be04b2.jpg)`,
-        }}
-      />
+      {/* Background Video */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          poster={`${import.meta.env.BASE_URL}77ff67b37e5c7e80d2b273048467c66a82be04b2.jpg`}
+          className="w-full h-full object-cover object-top"
+        >
+          <source src={heroVideo} type="video/mp4" />
+          Tu navegador no soporta el tag de video.
+        </video>
+        {/* Overlay to ensure text readability */}
+        <div className="absolute inset-0 bg-black/20" />
+      </div>
 
       {/* Dark overlay on bottom section - Desktop */}
       <div className="hidden md:block absolute left-0 right-0 top-[98px] bottom-0 bg-black/60" />
