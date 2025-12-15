@@ -5,7 +5,7 @@ import Header from '../layout/Header';
 import Footer from '../layout/Footer';
 import ProductModal from '../common/ProductModal';
 import CategoryHero from '../sections/CategoryHero';
-import { ArrowBigRight } from 'lucide-react';
+import { ArrowBigRight, ShoppingCart } from 'lucide-react';
 
 const CategoryPage = () => {
     const { id } = useParams();
@@ -16,14 +16,28 @@ const CategoryPage = () => {
     const [modalLoading, setModalLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Mock Data based on ID (simplified for demo)
-    const categoryName = `Categoría ${id}`;
-    const subCategories = [
-        "Aves Grandes y Jumbo",
-        "Parches",
-        "Parques",
-        "Transportadoras",
-        "Kit inicio"
+    // Category Mapping (Simulating "Real Data" based on user input and typical IDs)
+    const categoryMap = {
+        1: "Aves Chicas y Medianas", // Assuming ID 1 or current is this based on user's active example
+        2: "Aves Grandes y Jumbo",
+        3: "Parches",
+        4: "Parques",
+        5: "Transportadoras",
+        6: "Kit inicio",
+        9: "Aves Chicas y Medianas" // Mapping current ID 9 to the user's "Active" example for demo
+    };
+
+    const categoryName = categoryMap[id] || `Categoría ${id}`;
+
+    // List of other categories to display in sidebar (Excluding current if needed, or just list all)
+    // The user provided a specific list for the sidebar:
+    const sidebarCategories = [
+        { id: 9, name: "Aves Chicas y Medianas" }, // Active in example
+        { id: 2, name: "Aves Grandes y Jumbo" },
+        { id: 3, name: "Parches" },
+        { id: 4, name: "Parques" },
+        { id: 5, name: "Transportadoras" },
+        { id: 6, name: "Kit inicio" }
     ];
 
     React.useEffect(() => {
@@ -41,10 +55,11 @@ const CategoryPage = () => {
                 const mappedProducts = fileteredItems.map(item => ({
                     id: item.id,
                     name: item.Nombre || "Producto sin nombre", // API uses "Nombre"
-                    price: item.price ? `$${item.price} MXN` : "Precio no disponible",
+                    price: item.price ? (typeof item.price === 'number' ? `$${item.price} MXN` : item.price) : "Precio no disponible",
                     description: item.description || "Sin descripción",
                     // Use img_item if available, otherwise fallback
-                    image: item.img_item || `${import.meta.env.BASE_URL}shopping.jpg`
+                    image: item.img_item || `${import.meta.env.BASE_URL}shopping.jpg`,
+                    available_days: item.available_days
                 }));
                 setProducts(mappedProducts);
             } catch (err) {
@@ -82,7 +97,7 @@ const CategoryPage = () => {
 
 
     return (
-        <div className="min-h-screen bg-white relative">
+        <div className="min-h-screen bg-white relative font-['Inter']">
             {/* Back Button */}
             <Link
                 to="/"
@@ -94,84 +109,123 @@ const CategoryPage = () => {
             <CategoryHero />
 
             <main>
-                <div className="max-w-[1440px] mx-auto px-4 lg:px-[108px] py-12 flex flex-col md:flex-row gap-8 lg:gap-16">
-                    <div className="w-full flex-1 mb-8 md:mb-0 text-center md:text-right">
-                        <h2 className="text-2xl md:text-3xl font-bold text-black uppercase tracking-wide">
-                            {categoryName}
-                        </h2>
-                        <p className="text-brand-green text-sm md:text-base mt-2">
-                            En esta sección encontrarás accesorios adecuados para aves chicas y medianas
-                        </p>
-                    </div>
-                </div>
+                <div className="max-w-[1440px] mx-auto px-4 lg:px-[108px] py-6 md:py-12 flex flex-col md:flex-row gap-6 lg:gap-16">
 
-                <div className="max-w-[1440px] mx-auto px-4 lg:px-[108px] pb-12 flex flex-col md:flex-row gap-8 lg:gap-16">
+
 
                     {/* Sidebar */}
-                    <aside className="w-full md:w-64 flex-shrink-0">
-                        {/* Active selection */}
-                        <div className="bg-brand-green text-white rounded-full py-3 px-6 text-center font-medium mb-4 shadow-md">
-                            {categoryName}
-                        </div>
+                    <aside className="w-full md:w-[182px] flex-shrink-0 flex flex-row md:flex-col overflow-x-auto md:overflow-visible items-center md:items-start gap-3 md:gap-4 pb-2 md:pb-0 scrollbar-hide">
+                        {/* Render Sidebar Categories */}
+                        {sidebarCategories.map((cat) => {
+                            const isActive = cat.id === Number(id) || (id === '9' && cat.name === "Aves Chicas y Medianas"); // Logic to match current page
 
-                        {/* Other Categories List */}
-                        <nav className="flex flex-col space-y-2">
-                            {subCategories.map((sub, idx) => (
-                                <button
-                                    key={idx}
-                                    className="text-gray-500 hover:text-brand-green py-2 px-4 text-center md:text-left transition-colors font-medium text-sm rounded-lg hover:bg-gray-50"
+                            return isActive ? (
+                                /* Active selection (Group 3 style) */
+                                <div key={cat.id} className="min-w-[160px] md:min-w-[182px] w-auto md:w-[182px] h-[36px] md:h-[40px] flex items-center justify-center bg-[#1248A4] rounded-[25px] shadow-sm px-4 md:px-0">
+                                    <span className="text-white text-[13px] font-normal leading-[16px] text-center">
+                                        {cat.name}
+                                    </span>
+                                </div>
+                            ) : (
+                                /* Inactive Link (Group 9 style) */
+                                <Link
+                                    key={cat.id}
+                                    to={`/category/${cat.id}`}
+                                    className="min-w-[160px] md:min-w-[182px] w-auto md:w-[182px] h-[36px] flex items-center justify-center hover:bg-gray-50 rounded-lg transition-colors px-4 md:px-0"
                                 >
-                                    {sub}
-                                </button>
-                            ))}
-                        </nav>
+                                    <span className="text-[#000000] text-[13px] font-normal leading-[16px] text-center">
+                                        {cat.name}
+                                    </span>
+                                </Link>
+                            );
+                        })}
                     </aside>
 
-                    {/* Product Grid */}
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-                        {loading ? (
-                            <div className="col-span-full h-64 flex items-center justify-center">
-                                <div className="text-xl text-brand-green animate-pulse">Cargando productos...</div>
-                            </div>
-                        ) : error ? (
-                            <div className="col-span-full h-64 flex items-center justify-center">
-                                <div className="text-red-500">{error}</div>
-                            </div>
-                        ) : products.length === 0 ? (
-                            <div className="col-span-full h-64 flex items-center justify-center">
-                                <div className="text-gray-500">No hay productos disponibles para este día.</div>
-                            </div>
-                        ) : (
-                            products.map((product) => (
-                                <div key={product.id} className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300 flex flex-col items-center text-center group">
-                                    {/* Product Image */}
-                                    <div className="w-full aspect-square mb-6 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center relative">
-                                        <div className="absolute inset-0 bg-gray-100 animate-pulse hidden" /> {/* Loading state placeholder */}
-                                        <img
-                                            src={product.image}
-                                            alt={product.name}
-                                            className="w-[80%] h-[80%] object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                                        />
-                                    </div>
+                    {/* Main Content Area */}
+                    <div className="flex-1 flex flex-col gap-8">
 
-                                    {/* Content */}
-                                    <h3 className="font-bold text-lg text-gray-800 mb-2">{product.name}</h3>
-                                    <p className="text-gray-500 text-xs leading-relaxed line-clamp-3 mb-4 max-w-[250px]">
-                                        {product.description}
-                                    </p>
+                        {/* Top Bar: Cart & Title */}
+                        <div className="flex flex-col-reverse md:flex-row items-center md:items-start justify-between gap-4">
 
-                                    <div className="mt-auto w-full flex items-center justify-between px-2">
-                                        <span className="text-lg font-bold text-gray-900">{product.price}</span>
-                                        <button
-                                            onClick={() => handleOpenModal(product)}
-                                            className="bg-brand-green hover:bg-brand-green-dark text-white text-xs font-semibold py-2 px-6 rounded-full transition-colors shadow-sm hover:shadow-md"
-                                        >
-                                            Detalles
-                                        </button>
-                                    </div>
+                            {/* Cart Button (Left on Desktop) */}
+                            <div className="min-w-[166px] w-[166px] h-[44px]">
+                                <button className="w-full h-full bg-[#A41262] rounded-[10px] flex items-center justify-center gap-2 shadow-sm hover:bg-[#8a0f52] transition-colors group">
+                                    <ShoppingCart className="text-white w-5 h-5" />
+                                    <span className="text-white font-['Inter'] font-bold text-[14px] leading-[17px]">
+                                        Carrito
+                                    </span>
+                                </button>
+                            </div>
+
+                            {/* Title & Description (Right on Desktop) */}
+                            <div className="text-center md:text-right flex-1">
+                                <h2 className="text-2xl md:text-[32px] font-bold text-black uppercase tracking-wide leading-tight">
+                                    {categoryName}
+                                </h2>
+                                <p className="text-[#1248A4] text-sm md:text-[14px] mt-2 font-normal">
+                                    En esta sección encontrarás accesorios adecuados para aves chicas y medianas
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Product Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6 lg:gap-8">
+                            {loading ? (
+                                <div className="col-span-full h-64 flex items-center justify-center">
+                                    <span className="text-xl text-[#1248A4] animate-pulse font-medium">Cargando productos...</span>
                                 </div>
-                            ))
-                        )}
+                            ) : error ? (
+                                <div className="col-span-full h-64 flex items-center justify-center">
+                                    <div className="text-red-500">{error}</div>
+                                </div>
+                            ) : products.length === 0 ? (
+                                <div className="col-span-full h-64 flex items-center justify-center">
+                                    <div className="text-gray-500">No hay productos disponibles para este día.</div>
+                                </div>
+                            ) : (
+                                products.map((product) => (
+                                    <div key={product.id} className="w-full max-w-[250px] bg-[#F9F9F9] rounded-[15px] p-3 flex flex-col items-center relative shadow-sm hover:shadow-md transition-shadow duration-300 group">
+
+                                        {/* Image Container */}
+                                        <div className="w-full aspect-[250/143] mb-3 bg-white rounded-[15px] flex items-center justify-center overflow-hidden">
+                                            <img
+                                                src={product.image}
+                                                alt={product.name}
+                                                className="h-full w-full object-contain hover:scale-105 transition-transform duration-500 p-2"
+                                            />
+                                        </div>
+
+                                        {/* Title */}
+                                        <h3 className="font-['Inter'] font-bold text-[14px] leading-[17px] text-center text-[#494949] mb-1 w-full truncate px-2">
+                                            {product.name}
+                                        </h3>
+
+                                        {/* Description */}
+                                        <p className="font-['Inter'] font-medium text-[10px] leading-[12px] text-[#8A8A8A] text-center w-full px-2 h-[40px] overflow-hidden mb-3 line-clamp-3">
+                                            {product.description}
+                                        </p>
+
+                                        {/* Price & Button Container */}
+                                        <div className="w-full px-2 flex items-center justify-between mt-auto mb-2 gap-2">
+                                            {/* Price */}
+                                            <span className="font-['Inter'] font-bold text-[16px] leading-[20px] text-center text-[#8A8A8A]">
+                                                {product.price.replace(' MXN', '').replace('$', '')} MXN
+                                            </span>
+
+                                            {/* Details Button */}
+                                            <button
+                                                onClick={() => handleOpenModal(product)}
+                                                className="min-w-[80px] h-[28px] bg-[#008F24] rounded-[8px] flex items-center justify-center hover:bg-[#00741d] transition-colors"
+                                            >
+                                                <span className="font-['Inter'] font-normal text-[14px] leading-[17px] text-[#F9F9F9] text-center">
+                                                    Detalles
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 </div>
             </main>
