@@ -4,7 +4,7 @@ import { getItemsDay, getItemData } from '../../services/api';
 import Header from '../layout/Header';
 import Footer from '../layout/Footer';
 import ProductModal from '../common/ProductModal';
-import CategoryHero from '../sections/CategoryHero';
+import CategoryBanner from '../sections/CategoryBanner';
 import { ArrowBigRight, ShoppingCart } from 'lucide-react';
 
 const CategoryPage = () => {
@@ -101,12 +101,13 @@ const CategoryPage = () => {
             {/* Back Button */}
             <Link
                 to="/"
-                className="absolute top-4 left-4 z-50 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/40 transition-colors border border-white/30 text-white shadow-lg"
+                className="absolute top-4 left-4 z-50 w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors border border-gray-600 text-white shadow-lg"
             >
                 <ArrowBigRight className="rotate-180" />
             </Link>
 
-            <CategoryHero />
+            <CategoryBanner />
+            <Header />
 
             <main>
                 <div className="max-w-[1440px] mx-auto px-4 lg:px-[108px] py-6 md:py-12 flex flex-col md:flex-row gap-6 lg:gap-16">
@@ -148,14 +149,7 @@ const CategoryPage = () => {
                         <div className="flex flex-col-reverse md:flex-row items-center md:items-start justify-between gap-4">
 
                             {/* Cart Button (Left on Desktop) */}
-                            <div className="min-w-[166px] w-[166px] h-[44px]">
-                                <button className="w-full h-full bg-[#A41262] rounded-[10px] flex items-center justify-center gap-2 shadow-sm hover:bg-[#8a0f52] transition-colors group">
-                                    <ShoppingCart className="text-white w-5 h-5" />
-                                    <span className="text-white font-['Inter'] font-bold text-[14px] leading-[17px]">
-                                        Carrito
-                                    </span>
-                                </button>
-                            </div>
+
 
                             {/* Title & Description (Right on Desktop) */}
                             <div className="text-center md:text-right flex-1">
