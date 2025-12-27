@@ -20,7 +20,7 @@ const CategoryPage = () => {
     const categoryMap = {
         1: "Aves Chicas y Medianas", // Assuming ID 1 or current is this based on user's active example
         2: "Aves Grandes y Jumbo",
-        3: "Parches",
+        3: "Perchas",
         4: "Parques",
         5: "Transportadoras",
         6: "Kit inicio",
@@ -34,7 +34,7 @@ const CategoryPage = () => {
     const sidebarCategories = [
         { id: 9, name: "Aves Chicas y Medianas" }, // Active in example
         { id: 2, name: "Aves Grandes y Jumbo" },
-        { id: 3, name: "Parches" },
+        { id: 3, name: "Perchas" },
         { id: 4, name: "Parques" },
         { id: 5, name: "Transportadoras" },
         { id: 6, name: "Kit inicio" }

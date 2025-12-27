@@ -1,69 +1,66 @@
 import React from 'react';
-import eclectusMale from '../../assets/eclectus_male.png';
-import ninfa from '../../assets/ninfa.png';
-import eclectusFemale from '../../assets/eclectus_female.png';
-import lovebird from '../../assets/lovebird_open.png';
 
-const CATEGORIES = [
-    {
-        id: 1,
-        name: 'LOROS',
-        color: 'bg-[#65ae2d]',
-        character: eclectusMale,
-        animation: 'animate-wave',
-        imgStyle: 'h-[60px] mb-1 md:mb-0 md:absolute md:h-[100px] md:-bottom-2 md:left-4'
-    },
-    {
-        id: 2,
-        name: 'ALIMENTOS',
-        color: 'bg-[#8c52ff]',
-        character: ninfa,
-        animation: 'animate-eat',
-        imgStyle: 'h-[60px] mb-1 md:mb-0 md:absolute md:h-[100px] md:-bottom-2 md:left-4'
-    },
-    {
-        id: 3,
-        name: 'JUGUETES',
-        color: 'bg-[#e61c3f]',
-        character: eclectusFemale,
-        animation: 'animate-swing',
-        imgStyle: 'h-[60px] mb-1 md:mb-0 md:absolute md:h-[100px] md:-bottom-2 md:left-4'
-    },
-    {
-        id: 4,
-        name: 'AVIARIOS',
-        color: 'bg-[#1aabd4]',
-        character: lovebird,
-        animation: 'animate-breathe',
-        imgStyle: 'h-[60px] mb-1 md:mb-0 md:absolute md:h-[100px] md:-bottom-2 md:left-4'
-    },
+// Background Images - usando las existentes como placeholders
+import bgLoros from '../../assets/Eclectus Macho.jpg';
+import bgAlimentos from '../../assets/Cockatiel.jpg';
+import bgJuguetes from '../../assets/Eclectus parrot female.jpg';
+import bgAviarios from '../../assets/Sun Conure.jpg';
+
+const BANNER_IMAGES = [
+    { id: 1, src: bgLoros, alt: 'Loro 1' },
+    { id: 2, src: bgAlimentos, alt: 'Loro 2' },
+    { id: 3, src: bgJuguetes, alt: 'Loro 3' },
+    { id: 4, src: bgAviarios, alt: 'Loro 4' },
 ];
 
 const CategoryBanner = () => {
     return (
-        <section className="w-full grid grid-cols-4 h-[120px] md:h-[180px]">
-            {CATEGORIES.map((cat) => (
-                <div
-                    key={cat.id}
-                    className={`relative w-full h-full ${cat.color} flex flex-col items-center justify-end pb-4 overflow-hidden border-r border-white/20 last:border-r-0 group`}
-                >
-                    {/* Background Overlay */}
-                    <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors duration-300"></div>
+        <section className="relative w-full h-[140px] md:h-[180px] bg-white overflow-hidden">
+            
+            {/* Imagen 1 - termina en la línea blanca 1 */}
+            <div 
+                className="absolute inset-0 w-full h-full"
+                style={{ clipPath: 'polygon(0 0, 23% 0, 18% 100%, 0 100%)' }}
+            >
+                <img src={BANNER_IMAGES[0].src} alt={BANNER_IMAGES[0].alt} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/30"></div>
+            </div>
 
-                    {/* Animated Character Guide */}
-                    {cat.character && (
-                        <img
-                            src={cat.character}
-                            alt={`${cat.name} guide`}
-                            className={`object-contain z-10 pointer-events-none ${cat.animation} ${cat.imgStyle}`}
-                        />
-                    )}
+            {/* Imagen 2 - empieza después de línea 1, termina en línea 2 */}
+            <div 
+                className="absolute inset-0 w-full h-full"
+                style={{ clipPath: 'polygon(24% 0, 48% 0, 43% 100%, 19% 100%)' }}
+            >
+                <img src={BANNER_IMAGES[1].src} alt={BANNER_IMAGES[1].alt} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/30"></div>
+            </div>
 
-                    <h2 className="relative z-20 text-white font-bree text-lg md:text-2xl drop-shadow-md tracking-wider uppercase mb-2 md:mb-6">
-                        {cat.name}
-                    </h2>
-                </div>
-            ))}
+            {/* Imagen 3 - empieza después de línea 2, termina en línea 3 */}
+            <div 
+                className="absolute inset-0 w-full h-full"
+                style={{ clipPath: 'polygon(49% 0, 73% 0, 68% 100%, 44% 100%)' }}
+            >
+                <img src={BANNER_IMAGES[2].src} alt={BANNER_IMAGES[2].alt} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/30"></div>
+            </div>
+
+            {/* Imagen 4 - empieza después de línea 3, termina en 100% */}
+            <div 
+                className="absolute inset-0 w-full h-full"
+                style={{ clipPath: 'polygon(74% 0, 100% 0, 100% 100%, 69% 100%)' }}
+            >
+                <img src={BANNER_IMAGES[3].src} alt={BANNER_IMAGES[3].alt} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/30"></div>
+            </div>
+            
+            {/* Logo Pepe's Toys - esquina superior derecha */}
+            <div className="absolute top-3 right-3 md:top-4 md:right-6 z-20">
+                <img
+                    src={`${import.meta.env.BASE_URL}9a56523df5887e32ef435d833bbd7b4e5b4f94e4.png`}
+                    alt="Pepe's Toys Logo"
+                    className="h-[40px] md:h-[60px] w-auto object-contain drop-shadow-lg"
+                />
+            </div>
         </section>
     );
 };

@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 
+# Build artifacts (se generan automáticamente)
+
 # Editor directories and files
 .idea
 .DS_Store

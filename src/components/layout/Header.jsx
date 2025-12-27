@@ -1,60 +1,54 @@
 import React from 'react';
-import { ShoppingCart, Phone } from 'lucide-react';
-import Button from '../common/Button';
+import { ShoppingCart, User } from 'lucide-react';
 import africanGrey from '../../assets/african_grey_pointing.png';
+import logoLetra from '../../assets/logo letra.jpg';
 
-const Header = ({ simple = false }) => {
-
+const Header = () => {
   return (
-    <>
-      <header className={`relative z-50 h-[80px] md:h-[110px] bg-white border-b border-gray-200 shadow-sm`}>
-        <div className="max-w-[1440px] mx-auto h-full px-4 md:px-6 lg:px-[60px] flex items-center justify-between">
-
-          {/* Logo Section - LEFT */}
-          <div className="flex items-center gap-4">
-            {/* Logo Image */}
-            <img
-              src={`${import.meta.env.BASE_URL}9a56523df5887e32ef435d833bbd7b4e5b4f94e4.png`}
-              alt="Pepe's Toys Logo"
-              className="h-[60px] md:h-[90px] w-auto object-contain"
-            />
-          </div>
-
-          {/* Central Actions (Visible on Mobile now) */}
-          <div className="flex items-center gap-2 lg:gap-6 relative">
-            {/* Character Guide: African Grey Pointing (Desktop only) */}
-            <img
-              src={africanGrey}
-              alt="Loro guía"
-              className="hidden lg:block absolute -left-[75px] -bottom-[12px] h-[80px] w-auto object-contain z-10 pointer-events-none mix-blend-multiply"
-            />
-
-            {/* Quiénes somos Button */}
-            <Button variant="whatsapp" className="!bg-[#008F24] text-white px-3 h-[32px] text-xs lg:px-8 lg:h-[44px] lg:text-lg font-medium rounded-full shadow-md hover:scale-105 transition-transform whitespace-nowrap">
-              Quiénes Somos
-            </Button>
-          </div>
-
-          {/* Right Actions: Cart & Contact */}
-          <div className="flex items-center gap-3 md:gap-6">
-            {/* Desktop Cart & Contact */}
-            <div className="hidden lg:flex items-center gap-4">
-              <Button variant="magenta" icon={ShoppingCart} className="h-[44px] px-6 rounded-[10px]">
-                Mi carrito
-              </Button>
-            </div>
-
-            {/* Mobile Cart Button */}
-            <div className="flex lg:hidden items-center gap-2">
-              <button className="w-10 h-10 bg-magenta-dark rounded-full flex items-center justify-center hover:opacity-90 transition-opacity">
-                <ShoppingCart size={20} className="text-white" />
-              </button>
-            </div>
-          </div>
-
+    <header className="relative z-50 bg-white shadow-sm">
+      <div className="max-w-[1440px] mx-auto h-[100px] md:h-[130px] px-4 md:px-8 lg:px-12 flex items-center justify-between">
+        
+        {/* Logo Section - LEFT (Logo de letras grande) */}
+        <div className="flex items-center">
+          <img
+            src={logoLetra}
+            alt="Pepe's Toys Logo"
+            className="h-[60px] md:h-[90px] lg:h-[100px] w-auto object-contain"
+          />
         </div>
-      </header>
-    </>
+
+        {/* Center Section - African Grey Character */}
+        <div className="hidden md:flex items-center justify-center flex-1">
+          <img
+            src={africanGrey}
+            alt="Loro guía"
+            className="h-[80px] lg:h-[100px] w-auto object-contain"
+          />
+        </div>
+
+        {/* Right Actions - Buttons */}
+        <div className="flex items-center gap-3 md:gap-4">
+          {/* Quienes somos Button - Verde */}
+          <button className="flex items-center justify-center gap-2 bg-[#008F24] hover:bg-[#007520] text-white px-4 md:px-6 py-2 md:py-3 rounded-full transition-all duration-300 hover:shadow-lg hover:scale-105">
+            <span className="font-sans text-sm md:text-base lg:text-lg font-medium whitespace-nowrap">
+              Quienes somos
+            </span>
+            <User size={18} className="md:w-5 md:h-5" />
+          </button>
+
+          {/* Mi carrito Button - Magenta/Rojo */}
+          <button className="flex items-center justify-center gap-2 bg-[#E11D48] hover:bg-[#BE123C] text-white px-4 md:px-6 py-2 md:py-3 rounded-full transition-all duration-300 hover:shadow-lg hover:scale-105">
+            <ShoppingCart size={18} className="md:w-5 md:h-5" />
+            <span className="font-sans text-sm md:text-base lg:text-lg font-medium whitespace-nowrap">
+              Mi carrito
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Divider line */}
+      <div className="w-full h-[1px] bg-gray-200"></div>
+    </header>
   );
 };
 
