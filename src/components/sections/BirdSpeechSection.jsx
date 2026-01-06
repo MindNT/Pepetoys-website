@@ -19,7 +19,7 @@ const BirdSpeechSection = () => {
                     {/* Speech Bubble */}
                     <div className="relative">
                         <div className="bg-[#283A5B] rounded-full px-6 md:px-8 py-3 md:py-4 flex items-center gap-3 shadow-md">
-                            <span className="text-white font-sans text-sm md:text-lg lg:text-xl font-normal">
+                            <span className="text-white font-satisfy text-lg md:text-2xl lg:text-2xl">
                                 Como ambientar una jaula ?
                             </span>
                             <MousePointer2 size={20} className="text-white md:w-6 md:h-6" />

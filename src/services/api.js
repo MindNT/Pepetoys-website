@@ -13,6 +13,52 @@ export const getTodayDateString = () => {
 };
 
 /**
+ * Fetches all available items.
+ * Endpoint: /items/get-items
+ * @returns {Promise<{status: string, data: Array}>} - List of items
+ */
+export const getItems = async () => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/items/get-items`, {
+            method: 'GET',
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Failed to fetch items:", error);
+        throw error;
+    }
+};
+
+/**
+ * Fetches all categories.
+ * Endpoint: /items/categories
+ * @returns {Promise<{status: string, data: Array<{id: number, name: string, is_active: number}>}>} - List of categories
+ */
+export const getCategories = async () => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/items/categories`, {
+            method: 'GET',
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Failed to fetch categories:", error);
+        throw error;
+    }
+};
+
+/**
  * Fetches items for the given day.
  * Endpoint: /items/get-items-day?day=YYYY-MM-DD
  * @param {string} date - Date in YYYY-MM-DD format

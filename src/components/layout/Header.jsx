@@ -30,7 +30,7 @@ const Header = () => {
         <div className="flex items-center gap-3 md:gap-4">
           {/* Quienes somos Button - Verde */}
           <button className="flex items-center justify-center gap-2 bg-[#008F24] hover:bg-[#007520] text-white px-4 md:px-6 py-2 md:py-3 rounded-full transition-all duration-300 hover:shadow-lg hover:scale-105">
-            <span className="font-sans text-sm md:text-base lg:text-lg font-medium whitespace-nowrap">
+            <span className="font-sans text-sm md:text-base lg:text-xl font-semibold whitespace-nowrap">
               Quienes somos
             </span>
             <User size={18} className="md:w-5 md:h-5" />
@@ -39,7 +39,7 @@ const Header = () => {
           {/* Mi carrito Button - Magenta/Rojo */}
           <button className="flex items-center justify-center gap-2 bg-[#E11D48] hover:bg-[#BE123C] text-white px-4 md:px-6 py-2 md:py-3 rounded-full transition-all duration-300 hover:shadow-lg hover:scale-105">
             <ShoppingCart size={18} className="md:w-5 md:h-5" />
-            <span className="font-sans text-sm md:text-base lg:text-lg font-medium whitespace-nowrap">
+            <span className="font-sans text-sm md:text-base lg:text-xl font-semibold whitespace-nowrap">
               Mi carrito
             </span>
           </button>

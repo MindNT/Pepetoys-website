@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getItemsDay, getItemData } from '../../services/api';
+import { getItems, getCategories, getItemData } from '../../services/api';
 import Header from '../layout/Header';
 import Footer from '../layout/Footer';
 import ProductModal from '../common/ProductModal';
@@ -15,52 +15,65 @@ const CategoryPage = () => {
     const [loading, setLoading] = useState(true);
     const [modalLoading, setModalLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [categories, setCategories] = useState([]);
+    const [categoryName, setCategoryName] = useState('');
 
-    // Category Mapping (Simulating "Real Data" based on user input and typical IDs)
-    const categoryMap = {
-        1: "Aves Chicas y Medianas", // Assuming ID 1 or current is this based on user's active example
-        2: "Aves Grandes y Jumbo",
-        3: "Perchas",
-        4: "Parques",
-        5: "Transportadoras",
-        6: "Kit inicio",
-        9: "Aves Chicas y Medianas" // Mapping current ID 9 to the user's "Active" example for demo
-    };
+    // Fetch categories for sidebar
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await getCategories();
+                if (response.status === 'success' && response.data) {
+                    const activeCategories = response.data
+                        .filter(cat => cat.is_active === 1)
+                        .map(cat => ({
+                            id: cat.id,
+                            name: cat.name
+                        }));
+                    setCategories(activeCategories);
+                    
+                    // Set current category name
+                    const currentCategory = activeCategories.find(cat => cat.id === Number(id));
+                    setCategoryName(currentCategory ? currentCategory.name : `Categoría ${id}`);
+                }
+            } catch (err) {
+                console.error("Error fetching categories:", err);
+            }
+        };
 
-    const categoryName = categoryMap[id] || `Categoría ${id}`;
+        fetchCategories();
+    }, [id]);
 
-    // List of other categories to display in sidebar (Excluding current if needed, or just list all)
-    // The user provided a specific list for the sidebar:
-    const sidebarCategories = [
-        { id: 9, name: "Aves Chicas y Medianas" }, // Active in example
-        { id: 2, name: "Aves Grandes y Jumbo" },
-        { id: 3, name: "Perchas" },
-        { id: 4, name: "Parques" },
-        { id: 5, name: "Transportadoras" },
-        { id: 6, name: "Kit inicio" }
-    ];
-
-    React.useEffect(() => {
+    // Fetch products
+    useEffect(() => {
         const fetchProducts = async () => {
             try {
                 setLoading(true);
-                const data = await getItemsDay();
+                const data = await getItems();
 
                 // API response structure is { status: "success", data: [...] }
                 const items = data.data || [];
 
                 // Filter items by category_id present in the URL
-                const fileteredItems = items.filter(item => item.category_id === Number(id));
+                const filteredItems = items.filter(item => item.category_id === Number(id));
 
-                const mappedProducts = fileteredItems.map(item => ({
-                    id: item.id,
-                    name: item.Nombre || "Producto sin nombre", // API uses "Nombre"
-                    price: item.price ? (typeof item.price === 'number' ? `$${item.price} MXN` : item.price) : "Precio no disponible",
-                    description: item.description || "Sin descripción",
-                    // Use img_item if available, otherwise fallback
-                    image: item.img_item || `${import.meta.env.BASE_URL}shopping.jpg`,
-                    available_days: item.available_days
-                }));
+                const mappedProducts = filteredItems.map(item => {
+                    // Validate image URL - must be a complete URL starting with http
+                    const isValidImageUrl = item.img_item && 
+                        (item.img_item.startsWith('http://') || item.img_item.startsWith('https://')) &&
+                        item.img_item.length > 10;
+                    
+                    return {
+                        id: item.id,
+                        name: item.name || "Producto sin nombre",
+                        price: item.price ? (typeof item.price === 'number' ? `$${item.price} MXN` : item.price) : "Precio no disponible",
+                        description: item.description || "Sin descripción",
+                        image: isValidImageUrl ? item.img_item : `${import.meta.env.BASE_URL}shopping.jpg`,
+                        available_days: item.available_days,
+                        atributo_1: item.atributo_1,
+                        atributo_2: item.atributo_2
+                    };
+                });
                 setProducts(mappedProducts);
             } catch (err) {
                 console.error("Error fetching products:", err);
@@ -116,9 +129,9 @@ const CategoryPage = () => {
 
                     {/* Sidebar */}
                     <aside className="w-full md:w-[182px] flex-shrink-0 flex flex-row md:flex-col overflow-x-auto md:overflow-visible items-center md:items-start gap-3 md:gap-4 pb-2 md:pb-0 scrollbar-hide">
-                        {/* Render Sidebar Categories */}
-                        {sidebarCategories.map((cat) => {
-                            const isActive = cat.id === Number(id) || (id === '9' && cat.name === "Aves Chicas y Medianas"); // Logic to match current page
+                        {/* Render Sidebar Categories from API */}
+                        {categories.map((cat) => {
+                            const isActive = cat.id === Number(id);
 
                             return isActive ? (
                                 /* Active selection (Group 3 style) */

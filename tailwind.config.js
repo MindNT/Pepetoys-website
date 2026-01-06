@@ -10,6 +10,7 @@ export default {
         sans: ['Inter', 'sans-serif'],
         arbutus: ['"Arbutus Slab"', 'serif'],
         bree: ['"Bree Serif"', 'serif'],
+        satisfy: ['Satisfy', 'cursive'],
       },
       colors: {
         magenta: {
