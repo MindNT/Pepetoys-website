@@ -21,12 +21,19 @@ const Collections = () => {
           // Filter only active categories and map to expected format
           const activeCategories = response.data
             .filter(cat => cat.is_active === 1)
-            .map(cat => ({
-              id: cat.id,
-              name: cat.name,
-              // Use default image for now, can be updated when API provides images
-              image: `${BASE_URL}da9333aea433f87cb618d778f1e3b8f8885f7f08.jpg`
-            }));
+            .map(cat => {
+              // Validate image URL from API
+              const imageUrl = cat.url_image || cat.img_url || cat.image_url || cat.image;
+              const isValidImageUrl = imageUrl && 
+                (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) &&
+                imageUrl.length > 10;
+              
+              return {
+                id: cat.id,
+                name: cat.name,
+                image: isValidImageUrl ? imageUrl : `${BASE_URL}da9333aea433f87cb618d778f1e3b8f8885f7f08.jpg`
+              };
+            });
           setCategories(activeCategories);
         }
       } catch (err) {

@@ -43,7 +43,7 @@ const CollectionCard = ({ name, image, mobile = false, onClick }) => {
         </div>
 
         {/* Arrow Circle Button - Negro */}
-        <div className={`bg-black rounded-full ${buttonSize} flex-shrink-0 flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+        <div className={`bg-black rounded-full ${buttonSize} flex-shrink-0 flex items-center justify-center`}>
           <ArrowIcon size={iconSize} />
         </div>
       </div>
