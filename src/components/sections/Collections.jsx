@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import CollectionCard from '../common/CollectionCard';
 import BirdSpeechSection from './BirdSpeechSection';
 import { getCategories } from '../../services/api';
+import formatGoogleDriveUrl from '../../utils/formatGoogleDriveUrl';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -28,10 +29,13 @@ const Collections = () => {
                 (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) &&
                 imageUrl.length > 10;
               
+              // Format Google Drive URLs to thumbnail format
+              const formattedImageUrl = isValidImageUrl ? formatGoogleDriveUrl(imageUrl) : `${BASE_URL}da9333aea433f87cb618d778f1e3b8f8885f7f08.jpg`;
+              
               return {
                 id: cat.id,
                 name: cat.name,
-                image: isValidImageUrl ? imageUrl : `${BASE_URL}da9333aea433f87cb618d778f1e3b8f8885f7f08.jpg`
+                image: formattedImageUrl
               };
             });
           setCategories(activeCategories);

@@ -5,7 +5,9 @@ import Header from '../layout/Header';
 import Footer from '../layout/Footer';
 import ProductModal from '../common/ProductModal';
 import CategoryBanner from '../sections/CategoryBanner';
-import { ArrowBigRight, ShoppingCart } from 'lucide-react';
+import { ArrowBigRight, ShoppingCart, Plus } from 'lucide-react';
+import { useCart } from '../../context/CartContext';
+import formatGoogleDriveUrl from '../../utils/formatGoogleDriveUrl';
 
 const CategoryPage = () => {
     const { id } = useParams();
@@ -17,6 +19,8 @@ const CategoryPage = () => {
     const [error, setError] = useState(null);
     const [categories, setCategories] = useState([]);
     const [categoryName, setCategoryName] = useState('');
+    const { addToCart, openCart } = useCart();
+    const [addedProductId, setAddedProductId] = useState(null);
 
     // Fetch categories for sidebar
     useEffect(() => {
@@ -63,12 +67,15 @@ const CategoryPage = () => {
                         (item.img_item.startsWith('http://') || item.img_item.startsWith('https://')) &&
                         item.img_item.length > 10;
                     
+                    // Format Google Drive URLs to thumbnail format
+                    const formattedImageUrl = isValidImageUrl ? formatGoogleDriveUrl(item.img_item) : `${import.meta.env.BASE_URL}shopping.jpg`;
+                    
                     return {
                         id: item.id,
                         name: item.name || "Producto sin nombre",
                         price: item.price ? (typeof item.price === 'number' ? `$${item.price} MXN` : item.price) : "Precio no disponible",
                         description: item.description || "Sin descripción",
-                        image: isValidImageUrl ? item.img_item : `${import.meta.env.BASE_URL}shopping.jpg`,
+                        image: formattedImageUrl,
                         available_days: item.available_days,
                         atributo_1: item.atributo_1,
                         atributo_2: item.atributo_2
@@ -106,6 +113,14 @@ const CategoryPage = () => {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setTimeout(() => setSelectedProduct(null), 300);
+    };
+
+    const handleQuickAddToCart = (product, event) => {
+        event.stopPropagation();
+        addToCart(product, 1);
+        // Feedback visual
+        setAddedProductId(product.id);
+        setTimeout(() => setAddedProductId(null), 1500);
     };
 
 
@@ -192,6 +207,28 @@ const CategoryPage = () => {
                             ) : (
                                 products.map((product) => (
                                     <div key={product.id} className="w-full max-w-[250px] bg-[#F9F9F9] rounded-[15px] p-3 flex flex-col items-center relative shadow-sm hover:shadow-md transition-shadow duration-300 group">
+
+                                        {/* Quick Add Button - Top Right Corner - MÁS GRANDE para móvil */}
+                                        <button
+                                            onClick={(e) => handleQuickAddToCart(product, e)}
+                                            className={`absolute top-2 right-2 md:top-3 md:right-3 z-10 w-11 h-11 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg ${
+                                                addedProductId === product.id
+                                                    ? 'bg-[#008F24] scale-110'
+                                                    : 'bg-white hover:bg-[#008F24] hover:scale-110 active:scale-95'
+                                            } group/add`}
+                                            title="Agregar al carrito"
+                                            aria-label="Agregar al carrito"
+                                        >
+                                            {addedProductId === product.id ? (
+                                                <svg className="w-6 h-6 md:w-5 md:h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            ) : (
+                                                <Plus className={`w-6 h-6 md:w-5 md:h-5 transition-colors ${
+                                                    addedProductId === product.id ? 'text-white' : 'text-[#008F24] group-hover/add:text-white'
+                                                }`} strokeWidth={2.5} />
+                                            )}
+                                        </button>
 
                                         {/* Image Container */}
                                         <div className="w-full aspect-[250/143] mb-3 bg-white rounded-[15px] flex items-center justify-center overflow-hidden">

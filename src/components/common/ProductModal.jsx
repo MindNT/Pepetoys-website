@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { X, Plus, Minus, ShoppingCart } from 'lucide-react';
 import Button from './Button';
+import { useCart } from '../../context/CartContext';
+import formatGoogleDriveUrl from '../../utils/formatGoogleDriveUrl';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
 const ProductModal = ({ isOpen, onClose, product, loading }) => {
     const [quantity, setQuantity] = useState(1);
+    const { addToCart, openCart } = useCart();
 
     if (!isOpen) return null;
 
@@ -32,8 +35,9 @@ const ProductModal = ({ isOpen, onClose, product, loading }) => {
 
     const availableDays = getAvailableDays();
 
-    // Image logic
-    const imageSrc = product?.img_item || product?.image || `${BASE_URL}shopping.jpg`;
+    // Image logic - Format Google Drive URLs
+    const rawImageSrc = product?.img_item || product?.image || `${BASE_URL}shopping.jpg`;
+    const imageSrc = rawImageSrc.startsWith('http') ? formatGoogleDriveUrl(rawImageSrc) : rawImageSrc;
 
     // Price logic
     const displayPrice = product?.price ? (typeof product.price === 'number' ? `$${product.price} MXN` : product.price) : "Consultar";
@@ -47,20 +51,21 @@ const ProductModal = ({ isOpen, onClose, product, loading }) => {
             />
 
             {/* Modal Container */}
-            <div className="relative bg-white rounded-[15px] w-full max-w-[600px] h-auto max-h-[90vh] overflow-y-auto shadow-[0px_4px_4px_rgba(0,0,0,0.25)] animate-in fade-in zoom-in duration-200">
+            <div className="relative bg-white rounded-2xl md:rounded-[15px] w-full max-w-[600px] h-auto max-h-[90vh] overflow-y-auto shadow-[0px_4px_4px_rgba(0,0,0,0.25)] animate-in fade-in zoom-in duration-200">
 
-                {/* Close Button */}
+                {/* Close Button - MÁS GRANDE para móvil */}
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 z-20 w-[30px] h-[30px] flex items-center justify-center bg-[#A41262] text-white hover:bg-[#8e1055] rounded-full transition-colors shadow-sm"
+                    className="absolute top-3 right-3 md:top-4 md:right-4 z-20 w-10 h-10 md:w-[30px] md:h-[30px] flex items-center justify-center bg-[#A41262] text-white hover:bg-[#8e1055] active:scale-95 rounded-full transition-all shadow-lg"
+                    aria-label="Cerrar"
                 >
-                    <X size={16} strokeWidth={3} />
+                    <X size={20} strokeWidth={3} className="md:w-4 md:h-4" />
                 </button>
 
-                <div className="p-8 flex flex-col h-full font-['Inter']">
+                <div className="p-6 md:p-8 flex flex-col h-full font-['Inter']">
 
-                    {/* Header: Title */}
-                    <h2 className="text-[24px] font-bold text-black mb-6 text-center leading-tight">
+                    {/* Header: Title - Más grande en móvil */}
+                    <h2 className="text-2xl md:text-[24px] font-bold text-black mb-4 md:mb-6 text-center leading-tight">
                         {product?.name || "Cargando..."}
                     </h2>
 
@@ -124,22 +129,24 @@ const ProductModal = ({ isOpen, onClose, product, loading }) => {
                                 <span className="text-[24px] font-bold text-[#8A8A8A]">{displayPrice}</span>
                             </div>
 
-                            {/* Quantity */}
+                            {/* Quantity - Botones más grandes para móvil */}
                             <div className="flex flex-col items-center md:items-end">
-                                <h3 className="text-[12px] font-bold text-black mb-2">Cantidad</h3>
+                                <h3 className="text-sm md:text-[12px] font-bold text-black mb-2">Cantidad</h3>
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                        className="w-[30px] h-[30px] flex items-center justify-center bg-[#008F24] text-white rounded-full hover:bg-green-700 transition-colors"
+                                        className="w-10 h-10 md:w-[30px] md:h-[30px] flex items-center justify-center bg-[#008F24] text-white rounded-full hover:bg-green-700 active:scale-95 transition-all"
+                                        aria-label="Disminuir cantidad"
                                     >
-                                        <Minus size={16} />
+                                        <Minus size={18} strokeWidth={2.5} />
                                     </button>
-                                    <span className="w-6 text-center font-bold text-[14px] text-black">{quantity}</span>
+                                    <span className="w-10 md:w-6 text-center font-bold text-lg md:text-[14px] text-black">{quantity}</span>
                                     <button
                                         onClick={() => setQuantity(quantity + 1)}
-                                        className="w-[30px] h-[30px] flex items-center justify-center bg-[#008F24] text-white rounded-full hover:bg-green-700 transition-colors"
+                                        className="w-10 h-10 md:w-[30px] md:h-[30px] flex items-center justify-center bg-[#008F24] text-white rounded-full hover:bg-green-700 active:scale-95 transition-all"
+                                        aria-label="Aumentar cantidad"
                                     >
-                                        <Plus size={16} />
+                                        <Plus size={18} strokeWidth={2.5} />
                                     </button>
                                 </div>
                             </div>
@@ -148,8 +155,30 @@ const ProductModal = ({ isOpen, onClose, product, loading }) => {
 
                     {/* Footer Button - Centered */}
                     <div className="mt-auto flex justify-center">
-                        <button className="w-[244px] h-[40px] bg-[#008F24] hover:bg-[#00741d] text-white font-bold text-[16px] rounded-[10px] shadow-none flex items-center justify-center transition-transform active:scale-[0.98]">
-                            Agregar
+                        <button 
+                            onClick={(e) => {
+                                if (product) {
+                                    addToCart(product, quantity);
+                                    // Mostrar feedback visual breve
+                                    const button = e.currentTarget;
+                                    const originalText = button.innerHTML;
+                                    button.innerHTML = '<svg class="w-5 h-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg> ¡Agregado!';
+                                    button.disabled = true;
+                                    button.classList.add('scale-95');
+                                    
+                                    setTimeout(() => {
+                                        button.innerHTML = originalText;
+                                        button.disabled = false;
+                                        button.classList.remove('scale-95');
+                                        // Cerrar modal SOLAMENTE (sin abrir carrito)
+                                        onClose();
+                                    }, 800);
+                                }
+                            }}
+                            className="w-full md:w-[244px] h-14 md:h-[40px] bg-[#008F24] hover:bg-[#00741d] disabled:bg-[#008F24] disabled:opacity-75 text-white font-bold text-lg md:text-[16px] rounded-xl md:rounded-[10px] shadow-none flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+                        >
+                            <ShoppingCart size={20} />
+                            Agregar al Carrito
                         </button>
                     </div>
 

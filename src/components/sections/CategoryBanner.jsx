@@ -1,81 +1,126 @@
-import React from 'react';
-
-// Imágenes de portada
-import portada1 from '../../assets/portada/1000863838.jpg';
-import portada2 from '../../assets/portada/1000863839.jpg';
-import portada3 from '../../assets/portada/1000863840.jpg';
-import portada4 from '../../assets/portada/1000863841.jpg';
-
-const BANNER_IMAGES = [
-    { id: 1, src: portada2, alt: 'Loro gris' },        // 1000863839 - African Grey
-    { id: 2, src: portada3, alt: 'Agapornis' },        // 1000863840 - Agapornis amarillos
-    { id: 3, src: portada1, alt: 'Loro verde' },       // 1000863838 - Loro verde con campana
-    { id: 4, src: portada4, alt: 'Lorikeet' },         // 1000863841 - Lorikeet colorido
-];
+import React, { useState, useEffect } from 'react';
+import portada1 from '../../assets/portada/1000863838.jpg'; // Loro verde
+import portada2 from '../../assets/portada/1000863839.jpg'; // African Grey
+import portada3 from '../../assets/portada/1000863840.jpg'; // Agapornis
+import portada4 from '../../assets/portada/1000863841.jpg'; // Lorikeet
 
 const CategoryBanner = () => {
+    // ESTADO PARA DETECTAR MÓVIL
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // CONFIGURACIÓN DINÁMICA
+    // 1. Skew: Subimos a 12deg en móvil para que se note la diagonal.
+    const SKEW_DEG = isMobile ? 12 : 15;
+    
+    // 2. Borde: 2px en móvil es suficiente.
+    const BORDER_WIDTH = isMobile ? '2px' : '4px';
+    
+    // 3. Escala: En móvil necesitamos más zoom (1.25) para cubrir la inclinación sin huecos.
+    const BASE_SCALE = isMobile ? 1.25 : 1.15; 
+
     return (
-        <section className="relative w-full h-[140px] md:h-[180px] bg-white overflow-hidden">
+        // AJUSTE DE ALTURA: Bajamos a h-[85px] en móvil. ¡Mucho más fino!
+        <div className="relative w-full h-[85px] md:h-[135px] bg-white overflow-hidden shadow-sm">
             
-            {/* Imagen 1 */}
-            <div 
-                className="absolute top-0 left-0 h-full"
-                style={{ 
-                    width: '28%',
-                    clipPath: 'polygon(0 0, 82% 0, 64% 100%, 0 100%)' 
-                }}
-            >
-                <img src={BANNER_IMAGES[0].src} alt={BANNER_IMAGES[0].alt} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/30"></div>
+            {/* Contenedor ancho */}
+            <div className="flex h-full w-[105%] -ml-[2.5%]">
+                
+                {/* --- FOTO 1: African Grey --- */}
+                <div 
+                    className="relative flex-1 overflow-hidden border-white"
+                    style={{ 
+                        transform: `skewX(-${SKEW_DEG}deg)`,
+                        borderRightWidth: BORDER_WIDTH 
+                    }}
+                >
+                    <img 
+                        src={portada2} 
+                        alt="African Grey" 
+                        className="w-full h-full object-cover transition-transform duration-1000 ease-out hover:scale-[1.3]"
+                        style={{ 
+                            transform: `skewX(${SKEW_DEG}deg) scale(${BASE_SCALE})`,
+                            // En móvil subimos el foco (5%) para ver la cabeza en la cinta estrecha
+                            objectPosition: isMobile ? '65% 5%' : '65% 10%' 
+                        }}
+                    />
+                </div>
+
+                {/* --- FOTO 2: Agapornis --- */}
+                <div 
+                    className="relative flex-1 overflow-hidden border-white"
+                    style={{ 
+                        transform: `skewX(-${SKEW_DEG}deg)`,
+                        borderRightWidth: BORDER_WIDTH 
+                    }}
+                >
+                    <img 
+                        src={portada3} 
+                        alt="Agapornis" 
+                        className="w-full h-full object-cover transition-transform duration-1000 ease-out hover:scale-[1.3]"
+                        style={{ 
+                            transform: `skewX(${SKEW_DEG}deg) scale(${BASE_SCALE})`,
+                            objectPosition: 'center center' 
+                        }}
+                    />
+                </div>
+
+                {/* --- FOTO 3: Loro Verde --- */}
+                <div 
+                    className="relative flex-1 overflow-hidden border-white"
+                    style={{ 
+                        transform: `skewX(-${SKEW_DEG}deg)`,
+                        borderRightWidth: BORDER_WIDTH 
+                    }}
+                >
+                    <img 
+                        src={portada1} 
+                        alt="Loro verde" 
+                        className="w-full h-full object-cover transition-transform duration-1000 ease-out hover:scale-[1.3]"
+                        style={{ 
+                            transform: `skewX(${SKEW_DEG}deg) scale(${BASE_SCALE})`,
+                            objectPosition: 'center 20%' 
+                        }}
+                    />
+                </div>
+
+                {/* --- FOTO 4: Lorikeet --- */}
+                <div 
+                    className="relative flex-1 overflow-hidden"
+                    style={{ 
+                        transform: `skewX(-${SKEW_DEG}deg)` 
+                    }}
+                >
+                    <img 
+                        src={portada4} 
+                        alt="Lorikeet" 
+                        className="w-full h-full object-cover transition-transform duration-1000 ease-out hover:scale-[1.3]"
+                        style={{ 
+                            transform: `skewX(${SKEW_DEG}deg) scale(${BASE_SCALE})`,
+                            // Ajuste para ver color en la cinta estrecha
+                            objectPosition: isMobile ? '30% 50%' : '25% 60%' 
+                        }}
+                    />
+                </div>
+
             </div>
 
-            {/* Imagen 2 */}
-            <div 
-                className="absolute top-0 h-full"
-                style={{ 
-                    left: '19%',
-                    width: '30%',
-                    clipPath: 'polygon(17% 0, 97% 0, 80% 100%, 0 100%)' 
-                }}
-            >
-                <img src={BANNER_IMAGES[1].src} alt={BANNER_IMAGES[1].alt} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/30"></div>
-            </div>
-
-            {/* Imagen 3 */}
-            <div 
-                className="absolute top-0 h-full"
-                style={{ 
-                    left: '44%',
-                    width: '30%',
-                    clipPath: 'polygon(17% 0, 97% 0, 80% 100%, 0 100%)' 
-                }}
-            >
-                <img src={BANNER_IMAGES[2].src} alt={BANNER_IMAGES[2].alt} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/30"></div>
-            </div>
-
-            {/* Imagen 4 */}
-            <div 
-                className="absolute top-0 right-0 h-full"
-                style={{ 
-                    width: '32%',
-                    clipPath: 'polygon(16% 0, 100% 0, 100% 100%, 0 100%)' 
-                }}
-            >
-                <img src={BANNER_IMAGES[3].src} alt={BANNER_IMAGES[3].alt} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/30"></div>
-            </div>
-            
-            {/* Logo Pepe's Toys - esquina superior derecha */}
-            <div className="absolute top-3 right-3 md:top-4 md:right-6 z-20">
-                <img
-                    src={`${import.meta.env.BASE_URL}9a56523df5887e32ef435d833bbd7b4e5b4f94e4.png`}
-                    alt="Pepe's Toys Logo"
-                    className="h-[40px] md:h-[60px] w-auto object-contain drop-shadow-lg"
+            {/* Logo Flotante: Reducido a 35px para la nueva altura */}
+            <div className="absolute top-2 right-3 md:top-3 md:right-8 z-30 pointer-events-none">
+                <img 
+                    src={`${import.meta.env.BASE_URL}9a56523df5887e32ef435d833bbd7b4e5b4f94e4.png`} 
+                    alt="Pepe's Toys Logo" 
+                    className="h-[35px] md:h-[55px] w-auto drop-shadow-xl" 
                 />
             </div>
-        </section>
+        </div>
     );
 };
 
