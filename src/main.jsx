@@ -45,17 +45,38 @@ window.addEventListener('unhandledrejection', (event) => {
 
 // Log that the app is starting
 console.log('App starting...');
+console.log('Base URL:', import.meta.env.BASE_URL);
+console.log('Mode:', import.meta.env.MODE);
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <HashRouter>
-        <CartProvider>
-          <App />
-        </CartProvider>
-      </HashRouter>
-    </ErrorBoundary>
-  </React.StrictMode>,
-)
+// Verify root element exists
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  console.error('Root element not found!');
+  document.body.innerHTML = '<div style="padding: 20px; color: red;">Error: Root element not found</div>';
+} else {
+  console.log('Root element found, rendering app...');
+  try {
+    ReactDOM.createRoot(rootElement).render(
+      <React.StrictMode>
+        <ErrorBoundary>
+          <HashRouter>
+            <CartProvider>
+              <App />
+            </CartProvider>
+          </HashRouter>
+        </ErrorBoundary>
+      </React.StrictMode>,
+    )
+  } catch (error) {
+    console.error('Error rendering app:', error);
+    rootElement.innerHTML = `
+      <div style="padding: 20px; color: red; font-family: monospace;">
+        <h1>Error al cargar la aplicación</h1>
+        <pre>${error.toString()}</pre>
+        <p>Revisa la consola para más detalles.</p>
+      </div>
+    `;
+  }
+}
 
 

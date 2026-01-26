@@ -16,9 +16,10 @@ const Collections = () => {
     const fetchCategories = async () => {
       try {
         setLoading(true);
+        setError(null);
         const response = await getCategories();
         
-        if (response.status === 'success' && response.data) {
+        if (response && response.status === 'success' && response.data) {
           // Filter only active categories and map to expected format
           const activeCategories = response.data
             .filter(cat => cat.is_active === 1)
@@ -39,10 +40,15 @@ const Collections = () => {
               };
             });
           setCategories(activeCategories);
+        } else {
+          // Si no hay respuesta válida, usar categorías por defecto
+          setCategories([]);
         }
       } catch (err) {
         console.error("Error fetching categories:", err);
-        setError("No se pudieron cargar las categorías.");
+        // No mostrar error, solo usar array vacío para que la página se renderice
+        setCategories([]);
+        setError(null);
       } finally {
         setLoading(false);
       }

@@ -6,7 +6,12 @@ import portada4 from '../../assets/portada/1000863841.jpg'; // Lorikeet
 
 const CategoryBanner = () => {
     // ESTADO PARA DETECTAR MÓVIL
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [isMobile, setIsMobile] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth < 768;
+        }
+        return false; // Default para SSR
+    });
 
     useEffect(() => {
         const handleResize = () => {

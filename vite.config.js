@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [
     react(),
     {
-      name: 'copy-nojekyll',
+      name: 'copy-github-pages-files',
       closeBundle() {
         // Copiar .nojekyll a dist para GitHub Pages
         try {
@@ -19,6 +19,17 @@ export default defineConfig({
           console.log('✓ .nojekyll copiado a dist')
         } catch (error) {
           console.warn('⚠ No se pudo copiar .nojekyll:', error.message)
+        }
+        
+        // Copiar 404.html a dist para GitHub Pages SPA routing
+        try {
+          copyFileSync(
+            join(process.cwd(), 'public', '404.html'),
+            join(process.cwd(), 'dist', '404.html')
+          )
+          console.log('✓ 404.html copiado a dist')
+        } catch (error) {
+          console.warn('⚠ No se pudo copiar 404.html:', error.message)
         }
       }
     }
