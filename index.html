@@ -33,28 +33,55 @@
   <body>
     <div id="root"></div>
     <script>
-      // Diagnóstico para móvil
-      console.log('Page loading...');
-      console.log('User Agent:', navigator.userAgent);
-      console.log('Screen size:', window.screen.width, 'x', window.screen.height);
-      console.log('Window size:', window.innerWidth, 'x', window.innerHeight);
-      console.log('Root element exists:', !!document.getElementById('root'));
-      
-      // Prevenir zoom accidental en iOS
-      document.addEventListener('touchstart', function(event) {
-        if (event.touches.length > 1) {
-          event.preventDefault();
+      // Diagnóstico para móvil - Ejecutar ANTES de React
+      (function() {
+        console.log('=== DIAGNÓSTICO MÓVIL ===');
+        console.log('Page loading at:', new Date().toISOString());
+        console.log('User Agent:', navigator.userAgent);
+        console.log('Screen size:', window.screen.width, 'x', window.screen.height);
+        console.log('Window size:', window.innerWidth, 'x', window.innerHeight);
+        console.log('Device Pixel Ratio:', window.devicePixelRatio);
+        
+        const root = document.getElementById('root');
+        console.log('Root element exists:', !!root);
+        if (root) {
+          console.log('Root innerHTML length:', root.innerHTML.length);
+          root.style.backgroundColor = '#ffffff';
+          root.style.minHeight = '100vh';
         }
-      }, { passive: false });
-      
-      let lastTouchEnd = 0;
-      document.addEventListener('touchend', function(event) {
-        const now = Date.now();
-        if (now - lastTouchEnd <= 300) {
-          event.preventDefault();
-        }
-        lastTouchEnd = now;
-      }, false);
+        
+        // Verificar si es móvil
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        console.log('Detected as mobile:', isMobile);
+        
+        // Prevenir zoom accidental en iOS
+        document.addEventListener('touchstart', function(event) {
+          if (event.touches.length > 1) {
+            event.preventDefault();
+          }
+        }, { passive: false });
+        
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+          const now = Date.now();
+          if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+          }
+          lastTouchEnd = now;
+        }, false);
+        
+        // Verificar después de 2 segundos si React se montó
+        setTimeout(function() {
+          console.log('=== VERIFICACIÓN POST-CARGA ===');
+          console.log('Root children count:', root ? root.children.length : 0);
+          if (root && root.children.length === 0) {
+            console.error('⚠️ ADVERTENCIA: Root está vacío después de 2 segundos');
+            root.innerHTML = '<div style="padding:20px;text-align:center;background:white;min-height:100vh;"><h1 style="color:#008F24;">Pepe\'s Toys</h1><p>Cargando...</p></div>';
+          } else {
+            console.log('✅ React se montó correctamente');
+          }
+        }, 2000);
+      })();
     </script>
     <script type="module" src="/src/main.jsx"></script>
     <noscript>

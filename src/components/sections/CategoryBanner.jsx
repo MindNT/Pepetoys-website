@@ -16,28 +16,41 @@ const CategoryBanner = () => {
     useEffect(() => {
         // Verificar móvil después de que el componente se monte
         const checkMobile = () => {
-            if (typeof window !== 'undefined') {
-                setIsMobile(window.innerWidth < 768);
+            try {
+                if (typeof window !== 'undefined' && window.innerWidth !== undefined) {
+                    setIsMobile(window.innerWidth < 768);
+                }
+            } catch (error) {
+                console.error('Error checking mobile:', error);
+                // Default a móvil si hay error
+                setIsMobile(true);
             }
         };
         
-        // Verificar inmediatamente
-        checkMobile();
+        // Verificar después de un pequeño delay para asegurar que window está listo
+        const timeoutId = setTimeout(checkMobile, 0);
         
         // Y también en resize
         const handleResize = () => {
             checkMobile();
         };
         
-        window.addEventListener('resize', handleResize);
         // También verificar en orientationchange para móviles
-        window.addEventListener('orientationchange', () => {
+        const handleOrientationChange = () => {
             setTimeout(checkMobile, 100);
-        });
+        };
+        
+        if (typeof window !== 'undefined') {
+            window.addEventListener('resize', handleResize);
+            window.addEventListener('orientationchange', handleOrientationChange);
+        }
         
         return () => {
-            window.removeEventListener('resize', handleResize);
-            window.removeEventListener('orientationchange', checkMobile);
+            clearTimeout(timeoutId);
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('resize', handleResize);
+                window.removeEventListener('orientationchange', handleOrientationChange);
+            }
         };
     }, []);
 

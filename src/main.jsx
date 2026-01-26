@@ -47,6 +47,9 @@ window.addEventListener('unhandledrejection', (event) => {
 console.log('App starting...');
 console.log('Base URL:', import.meta.env.BASE_URL);
 console.log('Mode:', import.meta.env.MODE);
+console.log('User Agent:', navigator.userAgent);
+console.log('Screen:', window.screen.width, 'x', window.screen.height);
+console.log('Window:', window.innerWidth, 'x', window.innerHeight);
 
 // Verify root element exists
 const rootElement = document.getElementById('root');
@@ -55,8 +58,10 @@ if (!rootElement) {
   document.body.innerHTML = '<div style="padding: 20px; color: red;">Error: Root element not found</div>';
 } else {
   console.log('Root element found, rendering app...');
+  
   try {
-    ReactDOM.createRoot(rootElement).render(
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(
       <React.StrictMode>
         <ErrorBoundary>
           <HashRouter>
@@ -66,11 +71,12 @@ if (!rootElement) {
           </HashRouter>
         </ErrorBoundary>
       </React.StrictMode>,
-    )
+    );
+    console.log('App rendered successfully');
   } catch (error) {
     console.error('Error rendering app:', error);
     rootElement.innerHTML = `
-      <div style="padding: 20px; color: red; font-family: monospace;">
+      <div style="padding: 20px; color: red; font-family: monospace; background: white; min-height: 100vh;">
         <h1>Error al cargar la aplicación</h1>
         <pre>${error.toString()}</pre>
         <p>Revisa la consola para más detalles.</p>
