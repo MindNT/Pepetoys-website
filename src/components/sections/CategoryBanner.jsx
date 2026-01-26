@@ -14,11 +14,31 @@ const CategoryBanner = () => {
     });
 
     useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768);
+        // Verificar móvil después de que el componente se monte
+        const checkMobile = () => {
+            if (typeof window !== 'undefined') {
+                setIsMobile(window.innerWidth < 768);
+            }
         };
+        
+        // Verificar inmediatamente
+        checkMobile();
+        
+        // Y también en resize
+        const handleResize = () => {
+            checkMobile();
+        };
+        
         window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        // También verificar en orientationchange para móviles
+        window.addEventListener('orientationchange', () => {
+            setTimeout(checkMobile, 100);
+        });
+        
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('orientationchange', checkMobile);
+        };
     }, []);
 
     // CONFIGURACIÓN DINÁMICA
