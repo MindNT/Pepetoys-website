@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
+import { X, Plus, Minus, Trash2, ShoppingBag, Loader2 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import ConfirmDialog from './ConfirmDialog';
+import { saveOrder } from '../../services/api';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -13,14 +14,123 @@ const CartDrawer = () => {
     updateQuantity, 
     removeFromCart,
     getTotalItems,
-    getTotalPrice 
+    getTotalPrice,
+    clearCart
   } = useCart();
 
   const [confirmDelete, setConfirmDelete] = useState(null); // { id, name }
+  const [showPhoneDialog, setShowPhoneDialog] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleCheckout = () => {
-    alert('Procesando compra... Esta funcionalidad se implementará próximamente.');
-    // Aquí irá la lógica de checkout
+    if (cartItems.length === 0) {
+      alert('Tu carrito está vacío');
+      return;
+    }
+    setShowPhoneDialog(true);
+  };
+
+  const handlePhoneSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!phone || phone.trim() === '') {
+      alert('Por favor ingresa tu número de teléfono');
+      return;
+    }
+
+    // Validar formato básico de teléfono (solo números, mínimo 10 dígitos)
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10) {
+      alert('Por favor ingresa un número de teléfono válido (mínimo 10 dígitos)');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Formatear items: {id: quantity}
+      // El backend espera las claves como strings según el ejemplo: {"1": 2, "5": 1}
+      const items = {};
+      cartItems.forEach(item => {
+        // Convertir ID a string para la clave del objeto
+        items[String(item.id)] = item.quantity;
+      });
+
+      // Preparar datos del pedido
+      // Asegurar que total_amount tenga 2 decimales
+      const totalAmount = parseFloat(getTotalPrice().toFixed(2));
+      
+      // Validar que hay items
+      if (Object.keys(items).length === 0) {
+        alert('El carrito está vacío');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const orderData = {
+        phone: phoneDigits,
+        items: items,
+        total_amount: totalAmount,
+        promotions: {} // Objeto vacío según el ejemplo
+      };
+
+      // Log para debugging
+      console.log('Enviando pedido:', JSON.stringify(orderData, null, 2));
+
+      // Enviar pedido al backend
+      const response = await saveOrder(orderData);
+
+      // Si la respuesta es exitosa
+      if (response) {
+        // Limpiar carrito
+        clearCart();
+        // Cerrar diálogos
+        setShowPhoneDialog(false);
+        setPhone('');
+        closeCart();
+        // Mostrar mensaje de éxito
+        alert('¡Pedido realizado con éxito! Te contactaremos pronto.');
+      } else {
+        throw new Error('No se recibió respuesta del servidor');
+      }
+    } catch (error) {
+      console.error('Error al procesar el pedido:', error);
+      
+      // Mostrar mensaje de error más específico
+      let errorMessage = 'Error al procesar el pedido. Por favor intenta de nuevo.';
+      
+      if (error.message) {
+        // Si el error menciona que el cliente no existe
+        if (error.message.includes('Customer with phone') && error.message.includes('not found')) {
+          errorMessage = 'El número de teléfono no está registrado en nuestro sistema. Por favor, contacta con nosotros al WhatsApp o teléfono para registrarte antes de realizar tu pedido.';
+        } else if (error.message.includes('API error')) {
+          // Extraer el mensaje del error de la API
+          try {
+            const errorMatch = error.message.match(/"message":"([^"]+)"/);
+            if (errorMatch) {
+              const apiMessage = errorMatch[1];
+              if (apiMessage.includes('not found')) {
+                errorMessage = 'El número de teléfono no está registrado. Por favor, contacta con nosotros para registrarte primero.';
+              } else {
+                errorMessage = `Error: ${apiMessage}`;
+              }
+            }
+          } catch (e) {
+            // Si no se puede parsear, usar el mensaje genérico
+          }
+        }
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePhoneCancel = () => {
+    setShowPhoneDialog(false);
+    setPhone('');
   };
 
   const handleDeleteClick = (item) => {
@@ -203,6 +313,64 @@ const CartDrawer = () => {
         onCancel={handleCancelDelete}
         productName={confirmDelete?.name || ''}
       />
+
+      {/* Phone Dialog */}
+      {showPhoneDialog && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 md:p-8">
+            <h3 className="text-2xl font-bold text-[#1A237E] mb-2">
+              Finalizar Compra
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Ingresa tu número de teléfono para completar tu pedido
+            </p>
+            
+            <form onSubmit={handlePhoneSubmit}>
+              <div className="mb-6">
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                  Número de Teléfono
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="9991234567"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent text-lg"
+                  required
+                  disabled={isSubmitting}
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handlePhoneCancel}
+                  disabled={isSubmitting}
+                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 px-6 py-3 bg-[#008F24] text-white font-semibold rounded-lg hover:bg-[#007520] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin" />
+                      Procesando...
+                    </>
+                  ) : (
+                    'Confirmar Pedido'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 };

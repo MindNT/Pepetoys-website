@@ -319,3 +319,4 @@ font-size: 0.875rem; /* 14px es aceptable */
 **Estado:** ✅ Completado y Probado  
 **Optimizado para:** Adultos usando móviles
 
+

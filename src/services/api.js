@@ -103,3 +103,86 @@ export const getItemData = async (id) => {
         throw error;
     }
 };
+
+/**
+ * Saves an order to the backend.
+ * Endpoint: /orders/save-order
+ * @param {Object} orderData - Order data object
+ * @param {string} orderData.phone - Customer phone number
+ * @param {Object} orderData.items - Object with item IDs as keys and quantities as values (e.g., {"1": 2, "5": 1})
+ * @param {number} orderData.total_amount - Total amount of the order
+ * @param {Object} orderData.promotions - Object with promotion IDs as keys and arrays of item IDs as values (e.g., {"1": [1, 20]})
+ * @param {string} orderData.code_order - Order code (optional, puede ser generado)
+ * @returns {Promise<Object>} - Response from the API
+ */
+export const saveOrder = async (orderData) => {
+    try {
+        // El backend espera los parámetros como query parameters, no en el body
+        // Generar código de orden si no se proporciona (timestamp o UUID simple)
+        const codeOrder = orderData.code_order || `ORD-${Date.now()}`;
+        
+        // Convertir items a string JSON para el query parameter
+        const itemsJson = JSON.stringify(orderData.items);
+        const promotionsJson = JSON.stringify(orderData.promotions || {});
+        
+        // Construir URL con query parameters
+        const url = new URL(`${API_BASE_URL}/orders/save-order`);
+        url.searchParams.append('phone', orderData.phone);
+        url.searchParams.append('code_order', codeOrder);
+        url.searchParams.append('total_amount', orderData.total_amount.toString());
+        url.searchParams.append('items', itemsJson);
+        url.searchParams.append('promotions', promotionsJson);
+
+        console.log('URL completa:', url.toString());
+
+        const response = await fetch(url.toString(), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        // Intentar leer la respuesta siempre, incluso si hay error
+        let responseData;
+        try {
+            const text = await response.text();
+            responseData = text ? JSON.parse(text) : null;
+        } catch (e) {
+            responseData = null;
+        }
+
+        if (!response.ok) {
+            // Intentar obtener el mensaje de error del servidor
+            let errorMessage = `${response.status} ${response.statusText}`;
+            let errorDetails = null;
+            
+            if (responseData) {
+                if (responseData.message) {
+                    errorMessage = responseData.message;
+                    errorDetails = responseData;
+                } else if (responseData.error) {
+                    errorMessage = responseData.error;
+                    errorDetails = responseData;
+                } else if (responseData.detail) {
+                    errorMessage = JSON.stringify(responseData.detail);
+                    errorDetails = responseData.detail;
+                } else {
+                    errorMessage = JSON.stringify(responseData);
+                    errorDetails = responseData;
+                }
+                console.error("Error response data:", responseData);
+            }
+            
+            // Crear un error con más información
+            const error = new Error(errorMessage);
+            error.status = response.status;
+            error.details = errorDetails;
+            throw error;
+        }
+
+        return responseData;
+    } catch (error) {
+        console.error("Failed to save order:", error);
+        throw error;
+    }
+};

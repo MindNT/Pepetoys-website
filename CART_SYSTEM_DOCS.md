@@ -215,3 +215,4 @@ console.log(JSON.parse(localStorage.getItem('pepetoysCart')));
 
 **Desarrollado con ❤️ para Pepe's Toys** 🦜
 
+
