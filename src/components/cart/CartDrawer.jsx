@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { X, Plus, Minus, Trash2, ShoppingBag, Loader2 } from 'lucide-react';
+import { X, Plus, Minus, Trash2, ShoppingBag, Loader2, MapPin, Store, Truck } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import ConfirmDialog from './ConfirmDialog';
-import { saveOrder } from '../../services/api';
+import OrderSuccessModal from './OrderSuccessModal';
+import { saveOrder, verifyCustomerPhone, addCustomer } from '../../services/api';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
 const CartDrawer = () => {
-  const { 
-    isCartOpen, 
-    closeCart, 
-    cartItems, 
-    updateQuantity, 
+  const {
+    isCartOpen,
+    closeCart,
+    cartItems,
+    updateQuantity,
     removeFromCart,
     getTotalItems,
     getTotalPrice,
@@ -20,8 +21,18 @@ const CartDrawer = () => {
 
   const [confirmDelete, setConfirmDelete] = useState(null); // { id, name }
   const [showPhoneDialog, setShowPhoneDialog] = useState(false);
+  const [showNameDialog, setShowNameDialog] = useState(false);
+  const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [phone, setPhone] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [deliveryOption, setDeliveryOption] = useState(''); // 'pickup', 'merida', 'exterior'
+  const [mapsUrl, setMapsUrl] = useState(null);
+  const [locationError, setLocationError] = useState('');
+  const [orderSuccessData, setOrderSuccessData] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   const handleCheckout = () => {
     if (cartItems.length === 0) {
@@ -31,9 +42,75 @@ const CartDrawer = () => {
     setShowPhoneDialog(true);
   };
 
+  // Función para enviar el pedido (extraída para reutilización)
+  const submitOrder = async (phoneDigits) => {
+    try {
+      // Formatear items: {id: quantity}
+      const items = {};
+      cartItems.forEach(item => {
+        items[String(item.id)] = item.quantity;
+      });
+
+      // Preparar datos del pedido
+      const totalAmount = parseFloat(getTotalPrice().toFixed(2));
+
+      const orderData = {
+        phone: phoneDigits,
+        items: items,
+        total_amount: totalAmount,
+        promotions: {},
+        // Solo Pickup no envía ubicación, Mérida y Exterior sí
+        maps_url: (deliveryOption === 'merida' || deliveryOption === 'exterior') ? mapsUrl : null
+      };
+
+      console.log('Enviando pedido:', JSON.stringify(orderData, null, 2));
+
+      // Enviar pedido al backend
+      const response = await saveOrder(orderData);
+
+      if (response) {
+        // Preparar datos para el modal de éxito
+        const successData = {
+          orderCode: orderData.code_order || response.order_code || response.data?.order_code || `ORD-${Date.now()}`,
+          phone: phoneDigits,
+          items: cartItems,
+          totalAmount: totalAmount,
+          customerName: customerName || response.customer_name || response.data?.customer_name
+        };
+
+        // Guardar datos del pedido exitoso
+        setOrderSuccessData(successData);
+
+        // Limpiar carrito y estados
+        clearCart();
+        setShowPhoneDialog(false);
+        setShowNameDialog(false);
+        setShowDeliveryDialog(false);
+        setDeliveryOption('');
+        setMapsUrl(null);
+        closeCart();
+
+        // Mostrar modal de éxito
+        setShowSuccessModal(true);
+      } else {
+        throw new Error('No se recibió respuesta del servidor');
+      }
+    } catch (error) {
+      console.error('Error al procesar el pedido:', error);
+      let errorMessage = 'Error al procesar el pedido. Por favor intenta de nuevo.';
+
+      if (error.message) {
+        errorMessage = error.message;
+      }
+
+      alert(errorMessage);
+      throw error;
+    }
+  };
+
   const handlePhoneSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!phone || phone.trim() === '') {
       alert('Por favor ingresa tu número de teléfono');
       return;
@@ -46,83 +123,154 @@ const CartDrawer = () => {
       return;
     }
 
+    setIsVerifying(true);
+
+    try {
+      // Verificar si el cliente existe
+      const verificationResponse = await verifyCustomerPhone(phoneDigits);
+
+      console.log('Respuesta de verificación:', verificationResponse);
+
+      // Verificar si el cliente existe basado en la respuesta
+      // La respuesta es:
+      // Si NO existe: {status: "success", phone: "7471234567", exists: 0}
+      // Si SÍ existe: {status: "success", phone: "9993661475", exists: 1, name: "Adrian Carmona"}
+
+      const customerExists = verificationResponse?.exists === 1;
+
+      console.log('Cliente existe:', customerExists);
+
+      if (customerExists) {
+        // Cliente existe, proceder con selección de entrega
+        setIsVerifying(false);
+        setShowPhoneDialog(false);
+        setShowDeliveryDialog(true);
+      } else {
+        // Cliente no existe, solicitar nombre
+        setIsVerifying(false);
+        setShowPhoneDialog(false);
+        setShowNameDialog(true);
+      }
+    } catch (error) {
+      console.error('Error al verificar el teléfono:', error);
+      setIsVerifying(false);
+
+      // Si hay error en la verificación, asumir que el cliente no existe
+      // y pedir el nombre para registrarlo
+      setShowPhoneDialog(false);
+      setShowNameDialog(true);
+    }
+  };
+
+  const handleNameSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!customerName || customerName.trim() === '') {
+      alert('Por favor ingresa tu nombre');
+      return;
+    }
+
+    const phoneDigits = phone.replace(/\D/g, '');
     setIsSubmitting(true);
 
     try {
-      // Formatear items: {id: quantity}
-      // El backend espera las claves como strings según el ejemplo: {"1": 2, "5": 1}
-      const items = {};
-      cartItems.forEach(item => {
-        // Convertir ID a string para la clave del objeto
-        items[String(item.id)] = item.quantity;
-      });
+      // Registrar nuevo cliente
+      console.log('Registrando cliente:', customerName, phoneDigits);
+      await addCustomer(customerName, phoneDigits);
 
-      // Preparar datos del pedido
-      // Asegurar que total_amount tenga 2 decimales
-      const totalAmount = parseFloat(getTotalPrice().toFixed(2));
-      
-      // Validar que hay items
-      if (Object.keys(items).length === 0) {
-        alert('El carrito está vacío');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      const orderData = {
-        phone: phoneDigits,
-        items: items,
-        total_amount: totalAmount,
-        promotions: {} // Objeto vacío según el ejemplo
-      };
-
-      // Log para debugging
-      console.log('Enviando pedido:', JSON.stringify(orderData, null, 2));
-
-      // Enviar pedido al backend
-      const response = await saveOrder(orderData);
-
-      // Si la respuesta es exitosa
-      if (response) {
-        // Limpiar carrito
-        clearCart();
-        // Cerrar diálogos
-        setShowPhoneDialog(false);
-        setPhone('');
-        closeCart();
-        // Mostrar mensaje de éxito
-        alert('¡Pedido realizado con éxito! Te contactaremos pronto.');
-      } else {
-        throw new Error('No se recibió respuesta del servidor');
-      }
+      // Cliente registrado exitosamente, proceder con selección de entrega
+      setIsSubmitting(false);
+      setShowNameDialog(false);
+      setShowDeliveryDialog(true);
     } catch (error) {
-      console.error('Error al procesar el pedido:', error);
-      
-      // Mostrar mensaje de error más específico
-      let errorMessage = 'Error al procesar el pedido. Por favor intenta de nuevo.';
-      
-      if (error.message) {
-        // Si el error menciona que el cliente no existe
-        if (error.message.includes('Customer with phone') && error.message.includes('not found')) {
-          errorMessage = 'El número de teléfono no está registrado en nuestro sistema. Por favor, contacta con nosotros al WhatsApp o teléfono para registrarte antes de realizar tu pedido.';
-        } else if (error.message.includes('API error')) {
-          // Extraer el mensaje del error de la API
-          try {
-            const errorMatch = error.message.match(/"message":"([^"]+)"/);
-            if (errorMatch) {
-              const apiMessage = errorMatch[1];
-              if (apiMessage.includes('not found')) {
-                errorMessage = 'El número de teléfono no está registrado. Por favor, contacta con nosotros para registrarte primero.';
-              } else {
-                errorMessage = `Error: ${apiMessage}`;
-              }
-            }
-          } catch (e) {
-            // Si no se puede parsear, usar el mensaje genérico
+      console.error('Error al registrar el cliente:', error);
+      alert('Error al registrar el cliente. Por favor intenta de nuevo.');
+      setIsSubmitting(false);
+    }
+  };
+
+  // Función para solicitar geolocalización
+  const requestLocation = async () => {
+    if (!navigator.geolocation) {
+      setLocationError('Tu navegador no soporta geolocalización');
+      return false;
+    }
+
+    setIsGettingLocation(true);
+    setLocationError('');
+
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
+          setMapsUrl(url);
+          setIsGettingLocation(false);
+          resolve(true);
+        },
+        (error) => {
+          let errorMsg = 'No se pudo obtener tu ubicación';
+          if (error.code === 1) {
+            errorMsg = 'Permiso de ubicación denegado. Por favor permite el acceso a tu ubicación.';
+          } else if (error.code === 2) {
+            errorMsg = 'Ubicación no disponible. Verifica tu conexión.';
           }
+          setLocationError(errorMsg);
+          setIsGettingLocation(false);
+          resolve(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
         }
-      }
-      
-      alert(errorMessage);
+      );
+    });
+  };
+
+  // Manejar selección de opción de entrega
+  const handleDeliveryOptionChange = async (option) => {
+    setDeliveryOption(option);
+    setLocationError('');
+
+    // Si selecciona Mérida o Exterior, solicitar ubicación inmediatamente
+    // Solo Pickup no requiere ubicación
+    if (option === 'merida' || option === 'exterior') {
+      await requestLocation();
+    } else {
+      setMapsUrl(null);
+    }
+  };
+
+  // Validar y confirmar opción de entrega
+  const handleDeliveryConfirm = async () => {
+    const total = getTotalPrice();
+
+    // Validar que se haya seleccionado una opción
+    if (!deliveryOption) {
+      alert('Por favor selecciona un método de entrega');
+      return;
+    }
+
+    // Validar mínimo para Mérida (debe ser >= 1000)
+    if (deliveryOption === 'merida' && total < 1000) {
+      alert('El pedido mínimo para envío a Mérida es de $1,000 MXN');
+      return;
+    }
+
+    // Validar ubicación para Mérida y Exterior
+    if ((deliveryOption === 'merida' || deliveryOption === 'exterior') && !mapsUrl) {
+      alert('Debes permitir el acceso a tu ubicación para este método de entrega');
+      return;
+    }
+
+    // Proceder con el pedido
+    const phoneDigits = phone.replace(/\D/g, '');
+    setIsSubmitting(true);
+    try {
+      await submitOrder(phoneDigits);
+    } catch (error) {
+      // Error ya manejado en submitOrder
     } finally {
       setIsSubmitting(false);
     }
@@ -131,6 +279,27 @@ const CartDrawer = () => {
   const handlePhoneCancel = () => {
     setShowPhoneDialog(false);
     setPhone('');
+    setIsVerifying(false);
+  };
+
+  const handleNameCancel = () => {
+    setShowNameDialog(false);
+    setCustomerName('');
+    // Volver al diálogo de teléfono
+    setShowPhoneDialog(true);
+  };
+
+  const handleDeliveryCancel = () => {
+    setShowDeliveryDialog(false);
+    setDeliveryOption('');
+    setMapsUrl(null);
+    setLocationError('');
+    // Volver al diálogo anterior (nombre o teléfono)
+    if (customerName) {
+      setShowNameDialog(true);
+    } else {
+      setShowPhoneDialog(true);
+    }
   };
 
   const handleDeleteClick = (item) => {
@@ -152,17 +321,15 @@ const CartDrawer = () => {
     <>
       {/* Backdrop/Overlay */}
       <div
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity duration-300 ${
-          isCartOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity duration-300 ${isCartOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
         onClick={closeCart}
       />
 
       {/* Drawer Panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-full sm:w-[450px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-out ${
-          isCartOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed top-0 right-0 h-full w-full sm:w-[450px] bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-out ${isCartOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
       >
         {/* Header */}
         <div className="bg-[#1A237E] text-white px-6 py-5 flex items-center justify-between shadow-lg">
@@ -228,20 +395,19 @@ const CartDrawer = () => {
                         <button
                           onClick={() => updateQuantity(item.id, -1)}
                           disabled={item.quantity <= 1}
-                          className={`w-9 h-9 md:w-8 md:h-8 flex items-center justify-center rounded-full transition-colors ${
-                            item.quantity <= 1
-                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              : 'bg-[#008F24] text-white hover:bg-[#007520] active:scale-95'
-                          }`}
+                          className={`w-9 h-9 md:w-8 md:h-8 flex items-center justify-center rounded-full transition-colors ${item.quantity <= 1
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-[#008F24] text-white hover:bg-[#007520] active:scale-95'
+                            }`}
                           aria-label="Disminuir cantidad"
                         >
                           <Minus size={16} strokeWidth={3} />
                         </button>
-                        
+
                         <span className="w-10 md:w-8 text-center font-bold text-base md:text-sm text-gray-800">
                           {item.quantity}
                         </span>
-                        
+
                         <button
                           onClick={() => updateQuantity(item.id, 1)}
                           className="w-9 h-9 md:w-8 md:h-8 flex items-center justify-center bg-[#008F24] text-white rounded-full hover:bg-[#007520] transition-colors active:scale-95"
@@ -324,7 +490,7 @@ const CartDrawer = () => {
             <p className="text-gray-600 mb-6">
               Ingresa tu número de teléfono para completar tu pedido
             </p>
-            
+
             <form onSubmit={handlePhoneSubmit}>
               <div className="mb-6">
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
@@ -338,7 +504,7 @@ const CartDrawer = () => {
                   placeholder="9991234567"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent text-lg"
                   required
-                  disabled={isSubmitting}
+                  disabled={isVerifying || isSubmitting}
                   autoFocus
                 />
               </div>
@@ -347,10 +513,250 @@ const CartDrawer = () => {
                 <button
                   type="button"
                   onClick={handlePhoneCancel}
-                  disabled={isSubmitting}
+                  disabled={isVerifying || isSubmitting}
                   className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
                 >
                   Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isVerifying || isSubmitting}
+                  className="flex-1 px-6 py-3 bg-[#008F24] text-white font-semibold rounded-lg hover:bg-[#007520] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isVerifying ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin" />
+                      Verificando...
+                    </>
+                  ) : isSubmitting ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin" />
+                      Procesando...
+                    </>
+                  ) : (
+                    'Continuar'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Order Success Modal */}
+      <OrderSuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => {
+          setShowSuccessModal(false);
+          setOrderSuccessData(null);
+          setPhone('');
+          setCustomerName('');
+        }}
+        orderData={orderSuccessData}
+      />
+
+      {/* Delivery Options Dialog */}
+      {showDeliveryDialog && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 md:p-8">
+            <h3 className="text-2xl font-bold text-[#1A237E] mb-2">
+              Método de Entrega
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Selecciona cómo deseas recibir tu pedido
+            </p>
+
+            {/* Delivery Options */}
+            <div className="space-y-3 mb-6">
+              {/* Pickup */}
+              <label
+                className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${deliveryOption === 'pickup'
+                  ? 'border-[#008F24] bg-[#008F24]/5'
+                  : 'border-gray-200 hover:border-gray-300'
+                  }`}
+              >
+                <input
+                  type="radio"
+                  name="delivery"
+                  value="pickup"
+                  checked={deliveryOption === 'pickup'}
+                  onChange={() => handleDeliveryOptionChange('pickup')}
+                  className="mt-1 w-5 h-5 text-[#008F24] focus:ring-[#008F24]"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Store size={20} className="text-[#1A237E]" />
+                    <span className="font-semibold text-gray-900">Pickup en Tienda</span>
+                  </div>
+                  <p className="text-sm text-gray-600">Recoge tu pedido sin costo adicional</p>
+                </div>
+              </label>
+
+              {/* Mérida */}
+              <label
+                className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${deliveryOption === 'merida'
+                  ? 'border-[#008F24] bg-[#008F24]/5'
+                  : 'border-gray-200 hover:border-gray-300'
+                  }`}
+              >
+                <input
+                  type="radio"
+                  name="delivery"
+                  value="merida"
+                  checked={deliveryOption === 'merida'}
+                  onChange={() => handleDeliveryOptionChange('merida')}
+                  disabled={isGettingLocation}
+                  className="mt-1 w-5 h-5 text-[#008F24] focus:ring-[#008F24]"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Truck size={20} className="text-[#1A237E]" />
+                    <span className="font-semibold text-gray-900">Envío a Mérida</span>
+                  </div>
+                  <p className="text-sm text-gray-600">Pedido mínimo: $1,000 MXN</p>
+                  {deliveryOption === 'merida' && getTotalPrice() < 1000 && (
+                    <p className="text-sm text-red-600 mt-1">
+                      ⚠️ Total actual: ${getTotalPrice().toFixed(2)} MXN
+                    </p>
+                  )}
+                  {isGettingLocation && deliveryOption === 'merida' && (
+                    <p className="text-sm text-blue-600 mt-1 flex items-center gap-2">
+                      <Loader2 size={14} className="animate-spin" />
+                      Obteniendo ubicación...
+                    </p>
+                  )}
+                  {deliveryOption === 'merida' && mapsUrl && (
+                    <p className="text-sm text-green-600 mt-1">
+                      ✓ Ubicación obtenida
+                    </p>
+                  )}
+                </div>
+              </label>
+
+              {/* Exterior */}
+              <label
+                className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${deliveryOption === 'exterior'
+                  ? 'border-[#008F24] bg-[#008F24]/5'
+                  : 'border-gray-200 hover:border-gray-300'
+                  }`}
+              >
+                <input
+                  type="radio"
+                  name="delivery"
+                  value="exterior"
+                  checked={deliveryOption === 'exterior'}
+                  onChange={() => handleDeliveryOptionChange('exterior')}
+                  disabled={isGettingLocation}
+                  className="mt-1 w-5 h-5 text-[#008F24] focus:ring-[#008F24]"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <MapPin size={20} className="text-[#1A237E]" />
+                    <span className="font-semibold text-gray-900">Envío a Exterior</span>
+                  </div>
+                  <p className="text-sm text-gray-600">Costo por calcular</p>
+                  {isGettingLocation && (
+                    <p className="text-sm text-blue-600 mt-1 flex items-center gap-2">
+                      <Loader2 size={14} className="animate-spin" />
+                      Obteniendo ubicación...
+                    </p>
+                  )}
+                  {deliveryOption === 'exterior' && mapsUrl && (
+                    <p className="text-sm text-green-600 mt-1">
+                      ✓ Ubicación obtenida
+                    </p>
+                  )}
+                </div>
+              </label>
+            </div>
+
+            {/* Error Message */}
+            {locationError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-800">{locationError}</p>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleDeliveryCancel}
+                disabled={isSubmitting || isGettingLocation}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+              >
+                Atrás
+              </button>
+              <button
+                type="button"
+                onClick={handleDeliveryConfirm}
+                disabled={isSubmitting || isGettingLocation || !deliveryOption}
+                className="flex-1 px-6 py-3 bg-[#008F24] text-white font-semibold rounded-lg hover:bg-[#007520] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  'Confirmar Pedido'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Name Dialog - For New Customers */}
+      {showNameDialog && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 md:p-8">
+            <h3 className="text-2xl font-bold text-[#1A237E] mb-2">
+              Registro de Cliente
+            </h3>
+            <p className="text-gray-600 mb-6">
+              No encontramos tu número en nuestro sistema. Por favor ingresa tu nombre para completar el registro.
+            </p>
+
+            <form onSubmit={handleNameSubmit}>
+              <div className="mb-4">
+                <label htmlFor="customer-phone" className="block text-sm font-medium text-gray-700 mb-2">
+                  Teléfono
+                </label>
+                <input
+                  type="tel"
+                  id="customer-phone"
+                  value={phone}
+                  disabled
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 text-lg"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label htmlFor="customer-name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre Completo
+                </label>
+                <input
+                  type="text"
+                  id="customer-name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Ej: Juan Pérez"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent text-lg"
+                  required
+                  disabled={isSubmitting}
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleNameCancel}
+                  disabled={isSubmitting}
+                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
+                >
+                  Atrás
                 </button>
                 <button
                   type="submit"
@@ -360,7 +766,7 @@ const CartDrawer = () => {
                   {isSubmitting ? (
                     <>
                       <Loader2 size={20} className="animate-spin" />
-                      Procesando...
+                      Registrando...
                     </>
                   ) : (
                     'Confirmar Pedido'

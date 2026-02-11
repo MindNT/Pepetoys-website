@@ -12,28 +12,19 @@ const ProductModal = ({ isOpen, onClose, product, loading }) => {
 
     if (!isOpen) return null;
 
-    // Helper to parse available days
-    const getAvailableDays = () => {
-        if (!product?.available_days) return [];
-        try {
-            let daysObj = product.available_days;
-            if (typeof daysObj === 'string') {
-                daysObj = JSON.parse(daysObj);
-            }
-            if (typeof daysObj === 'string') {
-                daysObj = JSON.parse(daysObj);
-            }
-
-            return Object.entries(daysObj)
-                .filter(([_, available]) => available)
-                .map(([day]) => day);
-        } catch (e) {
-            console.error("Error parsing available days", e);
-            return [];
+    // Helper to get product attributes (atributo_1 and atributo_2)
+    const getAttributes = () => {
+        const attributes = [];
+        if (product?.atributo_1) {
+            attributes.push(product.atributo_1);
         }
+        if (product?.atributo_2) {
+            attributes.push(product.atributo_2);
+        }
+        return attributes;
     };
 
-    const availableDays = getAvailableDays();
+    const attributes = getAttributes();
 
     // Image logic - Format Google Drive URLs
     const rawImageSrc = product?.img_item || product?.image || `${BASE_URL}shopping.jpg`;
@@ -80,21 +71,21 @@ const ProductModal = ({ isOpen, onClose, product, loading }) => {
 
                     {/* Attributes Row (Grid) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        {/* Left: Atributos / Disponibilidad */}
+                        {/* Left: Atributos */}
                         <div>
                             <h3 className="text-[14px] font-bold text-black mb-2 text-center md:text-left">Atributos</h3>
                             <div className="flex flex-wrap justify-center md:justify-start gap-2">
                                 {loading ? (
                                     <span className="text-xs text-gray-400 animate-pulse">Verificando...</span>
-                                ) : availableDays.length > 0 ? (
-                                    availableDays.map(day => (
-                                        <span key={day} className="px-4 h-[32px] flex items-center bg-[#A41262]/10 text-[#A41262] text-[12px] font-medium rounded-[15px] capitalize">
-                                            {day}
+                                ) : attributes.length > 0 ? (
+                                    attributes.map((attr, index) => (
+                                        <span key={index} className="px-4 h-[32px] flex items-center bg-[#A41262]/10 text-[#A41262] text-[12px] font-medium rounded-[15px] capitalize">
+                                            {attr}
                                         </span>
                                     ))
                                 ) : (
                                     <span className="px-4 h-[32px] flex items-center bg-gray-100 text-gray-500 text-[12px] font-medium rounded-[15px]">
-                                        Consultar
+                                        Sin atributos
                                     </span>
                                 )}
                             </div>
@@ -155,7 +146,7 @@ const ProductModal = ({ isOpen, onClose, product, loading }) => {
 
                     {/* Footer Button - Centered */}
                     <div className="mt-auto flex justify-center">
-                        <button 
+                        <button
                             onClick={(e) => {
                                 if (product) {
                                     addToCart(product, quantity);
@@ -165,7 +156,7 @@ const ProductModal = ({ isOpen, onClose, product, loading }) => {
                                     button.innerHTML = '<svg class="w-5 h-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg> ¡Agregado!';
                                     button.disabled = true;
                                     button.classList.add('scale-95');
-                                    
+
                                     setTimeout(() => {
                                         button.innerHTML = originalText;
                                         button.disabled = false;

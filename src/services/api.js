@@ -120,11 +120,11 @@ export const saveOrder = async (orderData) => {
         // El backend espera los parámetros como query parameters, no en el body
         // Generar código de orden si no se proporciona (timestamp o UUID simple)
         const codeOrder = orderData.code_order || `ORD-${Date.now()}`;
-        
+
         // Convertir items a string JSON para el query parameter
         const itemsJson = JSON.stringify(orderData.items);
         const promotionsJson = JSON.stringify(orderData.promotions || {});
-        
+
         // Construir URL con query parameters
         const url = new URL(`${API_BASE_URL}/orders/save-order`);
         url.searchParams.append('phone', orderData.phone);
@@ -132,6 +132,11 @@ export const saveOrder = async (orderData) => {
         url.searchParams.append('total_amount', orderData.total_amount.toString());
         url.searchParams.append('items', itemsJson);
         url.searchParams.append('promotions', promotionsJson);
+
+        // Agregar maps_url si está presente (para entregas exteriores)
+        if (orderData.maps_url) {
+            url.searchParams.append('maps_url', orderData.maps_url);
+        }
 
         console.log('URL completa:', url.toString());
 
@@ -155,7 +160,7 @@ export const saveOrder = async (orderData) => {
             // Intentar obtener el mensaje de error del servidor
             let errorMessage = `${response.status} ${response.statusText}`;
             let errorDetails = null;
-            
+
             if (responseData) {
                 if (responseData.message) {
                     errorMessage = responseData.message;
@@ -172,7 +177,7 @@ export const saveOrder = async (orderData) => {
                 }
                 console.error("Error response data:", responseData);
             }
-            
+
             // Crear un error con más información
             const error = new Error(errorMessage);
             error.status = response.status;
@@ -186,3 +191,62 @@ export const saveOrder = async (orderData) => {
         throw error;
     }
 };
+
+/**
+ * Verifies if a customer exists by phone number.
+ * Endpoint: /customers/verify-phone
+ * @param {string} phone - Customer phone number (digits only)
+ * @returns {Promise<Object>} - Response indicating if customer exists
+ */
+export const verifyCustomerPhone = async (phone) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/customers/verify-phone?phone=${phone}`, {
+            method: 'GET',
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Failed to verify customer phone:", error);
+        throw error;
+    }
+};
+
+/**
+ * Registers a new customer.
+ * Endpoint: /customers/add-customer
+ * @param {string} name - Customer name
+ * @param {string} phone - Customer phone number (digits only)
+ * @returns {Promise<Object>} - Response with newly created customer data
+ */
+export const addCustomer = async (name, phone) => {
+    try {
+        const url = new URL(`${API_BASE_URL}/customers/add-customer`);
+        url.searchParams.append('name', name);
+        url.searchParams.append('phone', phone);
+
+        const response = await fetch(url.toString(), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            const errorMessage = errorData?.message || errorData?.error || `${response.status} ${response.statusText}`;
+            throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Failed to add customer:", error);
+        throw error;
+    }
+};
+
