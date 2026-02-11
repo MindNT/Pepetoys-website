@@ -60,3 +60,4 @@ vercel
 - `src/services/` - Servicios API
 - `src/context/` - Contextos de React
 - `public/` - Archivos estáticos
+# Deployment fix
