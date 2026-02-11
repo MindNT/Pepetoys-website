@@ -1,95 +1,97 @@
 <!doctype html>
 <html lang="es">
 
-  <head>
-    <meta charset="UTF-8" />
+<head>
+  <meta charset="UTF-8" />
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
-    
-    <!-- Primary Meta Tags -->
-    <title>Pepe's Toys - Alegría natural para tus aves | Jaulas, Voladeras y Accesorios</title>
-    <meta name="title" content="Pepe's Toys - Alegría natural para tus aves" />
+
+  <!-- Primary Meta Tags -->
+  <title>Pepe's Toys - Alegría natural para tus aves | Jaulas, Voladeras y Accesorios</title>
+  <meta name="title" content="Pepe's Toys - Alegría natural para tus aves" />
   <meta name="description"
     content="Productos diseñados con precisión, creados con amor. Descubre nuestra colección de jaulas, voladeras, alimentos y juguetes para tus aves. Cada pieza inspira el instinto natural." />
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Pepe's Toys - Alegría natural para tus aves" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Pepe's Toys - Alegría natural para tus aves" />
   <meta property="og:description"
     content="Productos diseñados con precisión, creados con amor. Descubre nuestra colección de jaulas, voladeras y accesorios para tus aves." />
-    
-    <!-- Favicon -->
-  <link rel="icon" type="image/png" href="/9a56523df5887e32ef435d833bbd7b4e5b4f94e4.png" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="./9a56523df5887e32ef435d833bbd7b4e5b4f94e4.png" />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Arbutus+Slab&family=Bree+Serif&family=Inter:wght@300;400;500;600;700;800&family=Satisfy&display=swap" rel="stylesheet">
-    
-    <!-- Theme Color -->
-  <meta name="theme-color" content="#008F24" />
-  </head>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Arbutus+Slab&family=Bree+Serif&family=Inter:wght@300;400;500;600;700;800&family=Satisfy&display=swap"
+    rel="stylesheet">
 
-  <body>
-    <div id="root"></div>
-    <script>
-      // Diagnóstico para móvil - Ejecutar ANTES de React
-      (function() {
-        console.log('=== DIAGNÓSTICO MÓVIL ===');
-        console.log('Page loading at:', new Date().toISOString());
-        console.log('User Agent:', navigator.userAgent);
-        console.log('Screen size:', window.screen.width, 'x', window.screen.height);
-        console.log('Window size:', window.innerWidth, 'x', window.innerHeight);
-        console.log('Device Pixel Ratio:', window.devicePixelRatio);
-        
-        const root = document.getElementById('root');
-        console.log('Root element exists:', !!root);
-        if (root) {
-          console.log('Root innerHTML length:', root.innerHTML.length);
-          root.style.backgroundColor = '#ffffff';
-          root.style.minHeight = '100vh';
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#008F24" />
+</head>
+
+<body>
+  <div id="root"></div>
+  <script>
+    // Diagnóstico para móvil - Ejecutar ANTES de React
+    (function () {
+      console.log('=== DIAGNÓSTICO MÓVIL ===');
+      console.log('Page loading at:', new Date().toISOString());
+      console.log('User Agent:', navigator.userAgent);
+      console.log('Screen size:', window.screen.width, 'x', window.screen.height);
+      console.log('Window size:', window.innerWidth, 'x', window.innerHeight);
+      console.log('Device Pixel Ratio:', window.devicePixelRatio);
+
+      const root = document.getElementById('root');
+      console.log('Root element exists:', !!root);
+      if (root) {
+        console.log('Root innerHTML length:', root.innerHTML.length);
+        root.style.backgroundColor = '#ffffff';
+        root.style.minHeight = '100vh';
+      }
+
+      // Verificar si es móvil
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      console.log('Detected as mobile:', isMobile);
+
+      // Prevenir zoom accidental en iOS
+      document.addEventListener('touchstart', function (event) {
+        if (event.touches.length > 1) {
+          event.preventDefault();
         }
-        
-        // Verificar si es móvil
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        console.log('Detected as mobile:', isMobile);
-        
-        // Prevenir zoom accidental en iOS
-        document.addEventListener('touchstart', function(event) {
-          if (event.touches.length > 1) {
-            event.preventDefault();
-          }
-        }, { passive: false });
-        
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', function(event) {
-          const now = Date.now();
-          if (now - lastTouchEnd <= 300) {
-            event.preventDefault();
-          }
-          lastTouchEnd = now;
-        }, false);
-        
-        // Verificar después de 2 segundos si React se montó
-        setTimeout(function() {
-          console.log('=== VERIFICACIÓN POST-CARGA ===');
-          console.log('Root children count:', root ? root.children.length : 0);
-          if (root && root.children.length === 0) {
-            console.error('⚠️ ADVERTENCIA: Root está vacío después de 2 segundos');
-            root.innerHTML = '<div style="padding:20px;text-align:center;background:white;min-height:100vh;"><h1 style="color:#008F24;">Pepe\'s Toys</h1><p>Cargando...</p></div>';
-          } else {
-            console.log('✅ React se montó correctamente');
-          }
-        }, 2000);
-      })();
-    </script>
-    <script type="module" src="/src/main.jsx"></script>
-    <noscript>
-      <div style="padding: 20px; text-align: center; font-family: Arial, sans-serif;">
-        <h1>JavaScript requerido</h1>
-        <p>Por favor, habilita JavaScript para ver este sitio.</p>
-      </div>
-    </noscript>
-  </body>
+      }, { passive: false });
+
+      let lastTouchEnd = 0;
+      document.addEventListener('touchend', function (event) {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+          event.preventDefault();
+        }
+        lastTouchEnd = now;
+      }, false);
+
+      // Verificar después de 2 segundos si React se montó
+      setTimeout(function () {
+        console.log('=== VERIFICACIÓN POST-CARGA ===');
+        console.log('Root children count:', root ? root.children.length : 0);
+        if (root && root.children.length === 0) {
+          console.error('⚠️ ADVERTENCIA: Root está vacío después de 2 segundos');
+          root.innerHTML = '<div style="padding:20px;text-align:center;background:white;min-height:100vh;"><h1 style="color:#008F24;">Pepe\'s Toys</h1><p>Cargando...</p></div>';
+        } else {
+          console.log('✅ React se montó correctamente');
+        }
+      }, 2000);
+    })();
+  </script>
+  <script type="module" src="./src/main.jsx"></script>
+  <noscript>
+    <div style="padding: 20px; text-align: center; font-family: Arial, sans-serif;">
+      <h1>JavaScript requerido</h1>
+      <p>Por favor, habilita JavaScript para ver este sitio.</p>
+    </div>
+  </noscript>
+</body>
 
 </html>
