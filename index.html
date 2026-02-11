@@ -77,15 +77,14 @@
         console.log('=== VERIFICACIÓN POST-CARGA ===');
         console.log('Root children count:', root ? root.children.length : 0);
         if (root && root.children.length === 0) {
-          console.error('⚠️ ADVERTENCIA: Root está vacío después de 2 segundos');
-          root.innerHTML = '<div style="padding:20px;text-align:center;background:white;min-height:100vh;"><h1 style="color:#008F24;">Pepe\'s Toys</h1><p>Cargando...</p></div>';
+          console.error('⚠️ ADVERTENCIA: Root está vacío después de 2 segundos. Revisa errores de carga de scripts en la pestaña Network.');
         } else {
           console.log('✅ React se montó correctamente');
         }
       }, 2000);
     })();
   </script>
-  <script type="module" src="./src/main.jsx"></script>
+  <script type="module" src="/src/main.jsx"></script>
   <noscript>
     <div style="padding: 20px; text-align: center; font-family: Arial, sans-serif;">
       <h1>JavaScript requerido</h1>

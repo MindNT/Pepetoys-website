@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 import App from './App.jsx'
 import './index.css'
+
+console.log('🚀 Main.jsx cargado y ejecutándose...');
 import { CartProvider } from './context/CartContext.jsx'
 
 // Error boundary component
@@ -58,7 +60,7 @@ if (!rootElement) {
   document.body.innerHTML = '<div style="padding: 20px; color: red;">Error: Root element not found</div>';
 } else {
   console.log('Root element found, rendering app...');
-  
+
   try {
     const root = ReactDOM.createRoot(rootElement);
     root.render(
