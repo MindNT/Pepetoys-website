@@ -3,7 +3,7 @@ import { X, Plus, Minus, Trash2, ShoppingBag, Loader2, MapPin, Store, Truck } fr
 import { useCart } from '../../context/CartContext';
 import ConfirmDialog from './ConfirmDialog';
 import OrderSuccessModal from './OrderSuccessModal';
-import { saveOrder, verifyCustomerPhone, addCustomer } from '../../services/api';
+import { saveOrder, verifyCustomerPhone, addCustomer, createPaymentPreference } from '../../services/api';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -27,12 +27,21 @@ const CartDrawer = () => {
   const [phone, setPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [deliveryOption, setDeliveryOption] = useState(''); // 'pickup', 'merida', 'exterior'
-  const [mapsUrl, setMapsUrl] = useState(null);
-  const [locationError, setLocationError] = useState('');
   const [orderSuccessData, setOrderSuccessData] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  // Address form fields
+  const [addressData, setAddressData] = useState({
+    recipientName: '',
+    street: '',
+    number: '',
+    crossStreet: '',
+    neighborhood: '',
+    facadeColor: '',
+    postalCode: '',
+    deliveryPhone: ''
+  });
 
   const handleCheckout = () => {
     if (cartItems.length === 0) {
@@ -54,13 +63,19 @@ const CartDrawer = () => {
       // Preparar datos del pedido
       const totalAmount = parseFloat(getTotalPrice().toFixed(2));
 
+      // Construir string de dirección si no es pickup
+      let addressString = null;
+      if (deliveryOption === 'merida' || deliveryOption === 'exterior') {
+        addressString = `Nombre: ${addressData.recipientName}, Calle: ${addressData.street}, Número: ${addressData.number}, Entre calle: ${addressData.crossStreet}, Colonia: ${addressData.neighborhood}, Color fachada: ${addressData.facadeColor}, Código postal: ${addressData.postalCode}, Teléfono: ${addressData.deliveryPhone}`;
+      }
+
       const orderData = {
         phone: phoneDigits,
         items: items,
         total_amount: totalAmount,
         promotions: {},
-        // Solo Pickup no envía ubicación, Mérida y Exterior sí
-        maps_url: (deliveryOption === 'merida' || deliveryOption === 'exterior') ? mapsUrl : null
+        // Solo Pickup no envía dirección, Mérida y Exterior sí
+        maps_url: addressString
       };
 
       console.log('Enviando pedido:', JSON.stringify(orderData, null, 2));
@@ -87,7 +102,16 @@ const CartDrawer = () => {
         setShowNameDialog(false);
         setShowDeliveryDialog(false);
         setDeliveryOption('');
-        setMapsUrl(null);
+        setAddressData({
+          recipientName: '',
+          street: '',
+          number: '',
+          crossStreet: '',
+          neighborhood: '',
+          facadeColor: '',
+          postalCode: '',
+          deliveryPhone: ''
+        });
         closeCart();
 
         // Mostrar modal de éxito
@@ -189,57 +213,30 @@ const CartDrawer = () => {
     }
   };
 
-  // Función para solicitar geolocalización
-  const requestLocation = async () => {
-    if (!navigator.geolocation) {
-      setLocationError('Tu navegador no soporta geolocalización');
-      return false;
+  // Manejar selección de opción de entrega
+  const handleDeliveryOptionChange = (option) => {
+    setDeliveryOption(option);
+    // Limpiar datos de dirección si cambia de opción
+    if (option === 'pickup') {
+      setAddressData({
+        recipientName: '',
+        street: '',
+        number: '',
+        crossStreet: '',
+        neighborhood: '',
+        facadeColor: '',
+        postalCode: '',
+        deliveryPhone: ''
+      });
     }
-
-    setIsGettingLocation(true);
-    setLocationError('');
-
-    return new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
-          setMapsUrl(url);
-          setIsGettingLocation(false);
-          resolve(true);
-        },
-        (error) => {
-          let errorMsg = 'No se pudo obtener tu ubicación';
-          if (error.code === 1) {
-            errorMsg = 'Permiso de ubicación denegado. Por favor permite el acceso a tu ubicación.';
-          } else if (error.code === 2) {
-            errorMsg = 'Ubicación no disponible. Verifica tu conexión.';
-          }
-          setLocationError(errorMsg);
-          setIsGettingLocation(false);
-          resolve(false);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        }
-      );
-    });
   };
 
-  // Manejar selección de opción de entrega
-  const handleDeliveryOptionChange = async (option) => {
-    setDeliveryOption(option);
-    setLocationError('');
-
-    // Si selecciona Mérida o Exterior, solicitar ubicación inmediatamente
-    // Solo Pickup no requiere ubicación
-    if (option === 'merida' || option === 'exterior') {
-      await requestLocation();
-    } else {
-      setMapsUrl(null);
-    }
+  // Manejar cambios en los campos de dirección
+  const handleAddressChange = (field, value) => {
+    setAddressData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   // Validar y confirmar opción de entrega
@@ -258,20 +255,41 @@ const CartDrawer = () => {
       return;
     }
 
-    // Validar ubicación para Mérida y Exterior
-    if ((deliveryOption === 'merida' || deliveryOption === 'exterior') && !mapsUrl) {
-      alert('Debes permitir el acceso a tu ubicación para este método de entrega');
-      return;
+    // Validar campos de dirección para Mérida y Exterior
+    if (deliveryOption === 'merida' || deliveryOption === 'exterior') {
+      const requiredFields = [
+        { field: 'recipientName', label: 'Nombre de quien recibe' },
+        { field: 'street', label: 'Calle' },
+        { field: 'number', label: 'Número' },
+        { field: 'crossStreet', label: 'Entre calle' },
+        { field: 'neighborhood', label: 'Colonia' },
+        { field: 'facadeColor', label: 'Color fachada' },
+        { field: 'postalCode', label: 'Código postal' },
+        { field: 'deliveryPhone', label: 'Teléfono' }
+      ];
+
+      for (const { field, label } of requiredFields) {
+        if (!addressData[field] || addressData[field].trim() === '') {
+          alert(`Por favor completa el campo: ${label}`);
+          return;
+        }
+      }
     }
 
-    // Proceder con el pedido
-    const phoneDigits = phone.replace(/\D/g, '');
+    // Proceder con el pago
+    const totalAmount = parseFloat(getTotalPrice().toFixed(2));
     setIsSubmitting(true);
     try {
-      await submitOrder(phoneDigits);
+      const paymentResponse = await createPaymentPreference(totalAmount);
+      const checkoutUrl = paymentResponse?.data?.sandbox_init_point;
+      if (!checkoutUrl) {
+        throw new Error('No se recibió la URL de pago del servidor');
+      }
+      // Redirigir al usuario a MercadoPago
+      window.location.href = checkoutUrl;
     } catch (error) {
-      // Error ya manejado en submitOrder
-    } finally {
+      console.error('Error al crear preferencia de pago:', error);
+      alert(error.message || 'Error al iniciar el pago. Por favor intenta de nuevo.');
       setIsSubmitting(false);
     }
   };
@@ -292,8 +310,16 @@ const CartDrawer = () => {
   const handleDeliveryCancel = () => {
     setShowDeliveryDialog(false);
     setDeliveryOption('');
-    setMapsUrl(null);
-    setLocationError('');
+    setAddressData({
+      recipientName: '',
+      street: '',
+      number: '',
+      crossStreet: '',
+      neighborhood: '',
+      facadeColor: '',
+      postalCode: '',
+      deliveryPhone: ''
+    });
     // Volver al diálogo anterior (nombre o teléfono)
     if (customerName) {
       setShowNameDialog(true);
@@ -558,7 +584,7 @@ const CartDrawer = () => {
       {/* Delivery Options Dialog */}
       {showDeliveryDialog && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 md:p-8">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-bold text-[#1A237E] mb-2">
               Método de Entrega
             </h3>
@@ -605,7 +631,6 @@ const CartDrawer = () => {
                   value="merida"
                   checked={deliveryOption === 'merida'}
                   onChange={() => handleDeliveryOptionChange('merida')}
-                  disabled={isGettingLocation}
                   className="mt-1 w-5 h-5 text-[#008F24] focus:ring-[#008F24]"
                 />
                 <div className="flex-1">
@@ -617,17 +642,6 @@ const CartDrawer = () => {
                   {deliveryOption === 'merida' && getTotalPrice() < 1000 && (
                     <p className="text-sm text-red-600 mt-1">
                       ⚠️ Total actual: ${getTotalPrice().toFixed(2)} MXN
-                    </p>
-                  )}
-                  {isGettingLocation && deliveryOption === 'merida' && (
-                    <p className="text-sm text-blue-600 mt-1 flex items-center gap-2">
-                      <Loader2 size={14} className="animate-spin" />
-                      Obteniendo ubicación...
-                    </p>
-                  )}
-                  {deliveryOption === 'merida' && mapsUrl && (
-                    <p className="text-sm text-green-600 mt-1">
-                      ✓ Ubicación obtenida
                     </p>
                   )}
                 </div>
@@ -646,7 +660,6 @@ const CartDrawer = () => {
                   value="exterior"
                   checked={deliveryOption === 'exterior'}
                   onChange={() => handleDeliveryOptionChange('exterior')}
-                  disabled={isGettingLocation}
                   className="mt-1 w-5 h-5 text-[#008F24] focus:ring-[#008F24]"
                 />
                 <div className="flex-1">
@@ -655,25 +668,127 @@ const CartDrawer = () => {
                     <span className="font-semibold text-gray-900">Envío a Exterior</span>
                   </div>
                   <p className="text-sm text-gray-600">Costo por calcular</p>
-                  {isGettingLocation && (
-                    <p className="text-sm text-blue-600 mt-1 flex items-center gap-2">
-                      <Loader2 size={14} className="animate-spin" />
-                      Obteniendo ubicación...
-                    </p>
-                  )}
-                  {deliveryOption === 'exterior' && mapsUrl && (
-                    <p className="text-sm text-green-600 mt-1">
-                      ✓ Ubicación obtenida
-                    </p>
-                  )}
                 </div>
               </label>
             </div>
 
-            {/* Error Message */}
-            {locationError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800">{locationError}</p>
+            {/* Address Form - Only show when Mérida or Exterior is selected */}
+            {(deliveryOption === 'merida' || deliveryOption === 'exterior') && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h4 className="text-lg font-semibold text-[#1A237E] mb-4">Datos de Entrega</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Nombre de quien recibe */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nombre de quien recibe *
+                    </label>
+                    <input
+                      type="text"
+                      value={addressData.recipientName}
+                      onChange={(e) => handleAddressChange('recipientName', e.target.value)}
+                      placeholder="Ej: Juan Pérez"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Calle */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Calle *
+                    </label>
+                    <input
+                      type="text"
+                      value={addressData.street}
+                      onChange={(e) => handleAddressChange('street', e.target.value)}
+                      placeholder="Ej: Calle 60"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Número */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Número *
+                    </label>
+                    <input
+                      type="text"
+                      value={addressData.number}
+                      onChange={(e) => handleAddressChange('number', e.target.value)}
+                      placeholder="Ej: 123"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Entre calle */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Entre calle *
+                    </label>
+                    <input
+                      type="text"
+                      value={addressData.crossStreet}
+                      onChange={(e) => handleAddressChange('crossStreet', e.target.value)}
+                      placeholder="Ej: Calle 61 y 63"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Colonia */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Colonia *
+                    </label>
+                    <input
+                      type="text"
+                      value={addressData.neighborhood}
+                      onChange={(e) => handleAddressChange('neighborhood', e.target.value)}
+                      placeholder="Ej: Centro"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Color fachada */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Color fachada *
+                    </label>
+                    <input
+                      type="text"
+                      value={addressData.facadeColor}
+                      onChange={(e) => handleAddressChange('facadeColor', e.target.value)}
+                      placeholder="Ej: Blanco"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Código postal */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Código postal *
+                    </label>
+                    <input
+                      type="text"
+                      value={addressData.postalCode}
+                      onChange={(e) => handleAddressChange('postalCode', e.target.value)}
+                      placeholder="Ej: 97000"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Teléfono */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Teléfono *
+                    </label>
+                    <input
+                      type="tel"
+                      value={addressData.deliveryPhone}
+                      onChange={(e) => handleAddressChange('deliveryPhone', e.target.value)}
+                      placeholder="Ej: 9991234567"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -682,7 +797,7 @@ const CartDrawer = () => {
               <button
                 type="button"
                 onClick={handleDeliveryCancel}
-                disabled={isSubmitting || isGettingLocation}
+                disabled={isSubmitting}
                 className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50"
               >
                 Atrás
@@ -690,7 +805,7 @@ const CartDrawer = () => {
               <button
                 type="button"
                 onClick={handleDeliveryConfirm}
-                disabled={isSubmitting || isGettingLocation || !deliveryOption}
+                disabled={isSubmitting || !deliveryOption}
                 className="flex-1 px-6 py-3 bg-[#008F24] text-white font-semibold rounded-lg hover:bg-[#007520] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
@@ -699,7 +814,7 @@ const CartDrawer = () => {
                     Procesando...
                   </>
                 ) : (
-                  'Confirmar Pedido'
+                  'Ir a Pagar'
                 )}
               </button>
             </div>
