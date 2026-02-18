@@ -276,19 +276,27 @@ const CartDrawer = () => {
       }
     }
 
-    // Proceder con el pago
     const totalAmount = parseFloat(getTotalPrice().toFixed(2));
     setIsSubmitting(true);
+
     try {
+      // 1. Primero guardar el pedido en el backend
+      const phoneDigits = phone.replace(/\D/g, '');
+      await submitOrder(phoneDigits);
+
+      // 2. Luego crear la preferencia de pago en MercadoPago
       const paymentResponse = await createPaymentPreference(totalAmount);
-      const checkoutUrl = paymentResponse?.data?.sandbox_init_point;
+      const checkoutUrl = paymentResponse?.data?.sandbox_init_point || paymentResponse?.data?.init_point;
+
       if (!checkoutUrl) {
         throw new Error('No se recibió la URL de pago del servidor');
       }
-      // Redirigir al usuario a MercadoPago
-      window.location.href = checkoutUrl;
+
+      // 3. Abrir MercadoPago en una nueva pestaña (sin salir de la app)
+      window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+
     } catch (error) {
-      console.error('Error al crear preferencia de pago:', error);
+      console.error('Error al procesar el pago:', error);
       alert(error.message || 'Error al iniciar el pago. Por favor intenta de nuevo.');
       setIsSubmitting(false);
     }
