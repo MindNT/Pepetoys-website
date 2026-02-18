@@ -3,7 +3,7 @@ import { X, Plus, Minus, Trash2, ShoppingBag, Loader2, MapPin, Store, Truck } fr
 import { useCart } from '../../context/CartContext';
 import ConfirmDialog from './ConfirmDialog';
 import OrderSuccessModal from './OrderSuccessModal';
-import { saveOrder, verifyCustomerPhone, addCustomer } from '../../services/api';
+import { saveOrder, verifyCustomerPhone, addCustomer, createPaymentPreference } from '../../services/api';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -276,14 +276,20 @@ const CartDrawer = () => {
       }
     }
 
-    // Proceder con el pedido
-    const phoneDigits = phone.replace(/\D/g, '');
+    // Proceder con el pago
+    const totalAmount = parseFloat(getTotalPrice().toFixed(2));
     setIsSubmitting(true);
     try {
-      await submitOrder(phoneDigits);
+      const paymentResponse = await createPaymentPreference(totalAmount);
+      const checkoutUrl = paymentResponse?.data?.sandbox_init_point;
+      if (!checkoutUrl) {
+        throw new Error('No se recibió la URL de pago del servidor');
+      }
+      // Redirigir al usuario a MercadoPago
+      window.location.href = checkoutUrl;
     } catch (error) {
-      // Error ya manejado en submitOrder
-    } finally {
+      console.error('Error al crear preferencia de pago:', error);
+      alert(error.message || 'Error al iniciar el pago. Por favor intenta de nuevo.');
       setIsSubmitting(false);
     }
   };
@@ -808,7 +814,7 @@ const CartDrawer = () => {
                     Procesando...
                   </>
                 ) : (
-                  'Confirmar Pedido'
+                  'Ir a Pagar'
                 )}
               </button>
             </div>

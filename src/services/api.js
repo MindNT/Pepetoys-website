@@ -250,3 +250,27 @@ export const addCustomer = async (name, phone) => {
     }
 };
 
+/**
+ * Creates a MercadoPago payment preference.
+ * Endpoint: http://localhost:5010/payments/create-preference?amount=<amount>
+ * @param {number} amount - Total amount to charge
+ * @returns {Promise<Object>} - Response with data.sandbox_init_point URL
+ */
+export const createPaymentPreference = async (amount) => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/payments/create-preference?amount=${amount}`,
+            { method: 'POST' }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Payment API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Failed to create payment preference:', error);
+        throw error;
+    }
+};
