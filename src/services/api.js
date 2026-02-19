@@ -252,9 +252,9 @@ export const addCustomer = async (name, phone) => {
 
 /**
  * Creates a MercadoPago payment preference.
- * Endpoint: http://localhost:5010/payments/create-preference?amount=<amount>
+ * Endpoint: /payments/create-preference?amount=<amount>
  * @param {number} amount - Total amount to charge
- * @returns {Promise<Object>} - Response with data.sandbox_init_point URL
+ * @returns {Promise<Object>} - Response with data.init_point URL (producción)
  */
 export const createPaymentPreference = async (amount) => {
     try {

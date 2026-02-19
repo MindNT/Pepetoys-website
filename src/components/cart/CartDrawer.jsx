@@ -286,7 +286,7 @@ const CartDrawer = () => {
 
       // 2. Luego crear la preferencia de pago en MercadoPago
       const paymentResponse = await createPaymentPreference(totalAmount);
-      const checkoutUrl = paymentResponse?.data?.sandbox_init_point || paymentResponse?.data?.init_point;
+      const checkoutUrl = paymentResponse?.data?.init_point || paymentResponse?.data?.sandbox_init_point;
 
       if (!checkoutUrl) {
         throw new Error('No se recibió la URL de pago del servidor');
