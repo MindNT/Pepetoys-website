@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pepe's Toys</title>
+    <script>
+        // Redirect to index.html for SPA routing
+        sessionStorage.redirect = location.href.split('/').slice(-1)[0];
+        location.replace('/Pepetoys-website/');
+    </script>
+</head>
+<body>
+    <p>Redirecting...</p>
+</body>
+</html>
+
