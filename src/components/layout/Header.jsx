@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ShoppingCart, User } from 'lucide-react';
 import africanGrey from '../../assets/african_grey_pointing.png';
 import logoLetra from '../../assets/logo letra.jpg';
 import { useCart } from '../../context/CartContext';
+import ConocenosModal from '../common/ConocenosModal';
 
 const Header = () => {
   const { openCart, getTotalItems } = useCart();
   const totalItems = getTotalItems();
+  const [isConocenosOpen, setIsConocenosOpen] = useState(false);
 
   return (
     <header className="relative z-50 bg-white shadow-sm">
@@ -27,7 +29,10 @@ const Header = () => {
 
         {/* Buttons - RIGHT */}
         <div className="flex items-center gap-4">
-          <button className="flex items-center justify-center gap-2 bg-[#008F24] hover:bg-[#007520] text-white px-6 py-3 rounded-full transition-all duration-300 hover:shadow-lg hover:scale-105">
+          <button 
+            onClick={() => setIsConocenosOpen(true)}
+            className="flex items-center justify-center gap-2 bg-[#008F24] hover:bg-[#007520] text-white px-6 py-3 rounded-full transition-all duration-300 hover:shadow-lg hover:scale-105"
+          >
             <span className="font-sans text-base lg:text-xl font-semibold whitespace-nowrap">Quienes somos</span>
             <User size={18} className="w-5 h-5" />
           </button>
@@ -55,7 +60,10 @@ const Header = () => {
 
         {/* Row 2: Buttons */}
         <div className="flex items-center justify-center gap-3">
-          <button className="flex items-center justify-center gap-2 bg-[#008F24] hover:bg-[#007520] text-white px-4 py-2 rounded-full transition-all duration-300 hover:shadow-lg hover:scale-105">
+          <button 
+            onClick={() => setIsConocenosOpen(true)}
+            className="flex items-center justify-center gap-2 bg-[#008F24] hover:bg-[#007520] text-white px-4 py-2 rounded-full transition-all duration-300 hover:shadow-lg hover:scale-105"
+          >
             <span className="font-sans text-sm font-semibold whitespace-nowrap">Quienes somos</span>
             <User size={16} />
           </button>
@@ -74,6 +82,8 @@ const Header = () => {
 
       {/* Divider line */}
       <div className="w-full h-[1px] bg-gray-200"></div>
+
+      <ConocenosModal isOpen={isConocenosOpen} onClose={() => setIsConocenosOpen(false)} />
     </header>
   );
 };
