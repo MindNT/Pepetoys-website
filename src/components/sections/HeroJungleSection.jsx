@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import AgendaVisitaButton from '../common/AgendaVisitaButton';
 import VoladerasModal from '../common/VoladerasModal';
 import MiVoladeraGalleryModal from '../common/MiVoladeraGalleryModal';
+import ProyectosEntregadosModal from '../common/ProyectosEntregadosModal';
 
 const HeroJungleSection = () => {
     const [isVoladerasModalOpen, setIsVoladerasModalOpen] = useState(false);
     const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
+    const [isProyectosModalOpen, setIsProyectosModalOpen] = useState(false);
 
     return (
         <section
@@ -34,7 +36,8 @@ const HeroJungleSection = () => {
                 <img
                     src={`${import.meta.env.BASE_URL}cuadro2.png`}
                     alt="Cuadro 2"
-                    className="w-[95%] max-w-[420px] object-contain"
+                    onClick={() => setIsProyectosModalOpen(true)}
+                    className="w-[95%] max-w-[420px] object-contain cursor-pointer transition-transform duration-300 active:scale-95"
                 />
 
                 <img
@@ -66,7 +69,8 @@ const HeroJungleSection = () => {
                 <img
                     src={`${import.meta.env.BASE_URL}cuadro2.png`}
                     alt="Cuadro Top Right"
-                    className="absolute top-10 right-10 z-10 w-[28%] max-w-[320px] lg:max-w-[360px] object-contain"
+                    onClick={() => setIsProyectosModalOpen(true)}
+                    className="absolute top-10 right-10 z-10 w-[28%] max-w-[320px] lg:max-w-[360px] object-contain cursor-pointer hover:scale-105 transition-transform duration-300"
                 />
 
                 {/* Esquina inferior derecha */}
@@ -99,6 +103,12 @@ const HeroJungleSection = () => {
             <MiVoladeraGalleryModal
                 isOpen={isGalleryModalOpen}
                 onClose={() => setIsGalleryModalOpen(false)}
+            />
+
+            {/* Modal de Proyectos Entregados */}
+            <ProyectosEntregadosModal
+                isOpen={isProyectosModalOpen}
+                onClose={() => setIsProyectosModalOpen(false)}
             />
         </section>
     );
