@@ -3,17 +3,32 @@ import AgendaVisitaButton from '../common/AgendaVisitaButton';
 import VoladerasModal from '../common/VoladerasModal';
 import MiVoladeraGalleryModal from '../common/MiVoladeraGalleryModal';
 import ProyectosEntregadosModal from '../common/ProyectosEntregadosModal';
+import CitaModal from '../common/CitaModal';
 
 const HeroJungleSection = () => {
     const [isVoladerasModalOpen, setIsVoladerasModalOpen] = useState(false);
     const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
     const [isProyectosModalOpen, setIsProyectosModalOpen] = useState(false);
+    const [isCitaModalOpen, setIsCitaModalOpen] = useState(false);
 
     return (
         <section
-            className="w-full min-h-screen md:h-screen bg-cover bg-center bg-no-repeat relative flex flex-col md:block"
-            style={{ backgroundImage: `url('${import.meta.env.BASE_URL}bg1.png')` }}
+            className="w-full min-h-screen md:h-screen relative flex flex-col md:block"
         >
+            {/* Background Mobile */}
+            <img 
+                src={`${import.meta.env.BASE_URL}bg1v.png`}
+                alt="Fondo Móvil"
+                className="absolute inset-0 w-full h-full object-cover object-left-bottom md:hidden"
+            />
+            
+            {/* Background PC */}
+            <img 
+                src={`${import.meta.env.BASE_URL}bg1.png`}
+                alt="Fondo PC"
+                className="absolute inset-0 w-full h-full object-cover object-left-bottom hidden md:block"
+            />
+
             {/* Opcional: overlay oscuro para que destaque el texto si se agrega luego */}
             <div className="absolute inset-0 bg-black/20 pointer-events-none"></div>
 
@@ -22,7 +37,7 @@ const HeroJungleSection = () => {
                 {/* En el título de la sección (arriba) el botón de agendar */}
                 <div className="w-full flex justify-center mb-6">
                     <div className="scale-110 sm:scale-125 transform origin-center transition-transform duration-300">
-                        <AgendaVisitaButton />
+                        <AgendaVisitaButton onClick={() => setIsCitaModalOpen(true)} />
                     </div>
                 </div>
 
@@ -90,7 +105,10 @@ const HeroJungleSection = () => {
                 />
 
                 {/* Botón Agenda tu visita en la esquina inferior izquierda */}
-                <AgendaVisitaButton className="absolute bottom-10 left-10 z-30" />
+                <AgendaVisitaButton 
+                    className="absolute bottom-10 left-10 z-30" 
+                    onClick={() => setIsCitaModalOpen(true)}
+                />
             </div>
 
             {/* Modal de Voladeras */}
@@ -109,6 +127,12 @@ const HeroJungleSection = () => {
             <ProyectosEntregadosModal
                 isOpen={isProyectosModalOpen}
                 onClose={() => setIsProyectosModalOpen(false)}
+            />
+
+            {/* Modal de Cita */}
+            <CitaModal
+                isOpen={isCitaModalOpen}
+                onClose={() => setIsCitaModalOpen(false)}
             />
         </section>
     );
