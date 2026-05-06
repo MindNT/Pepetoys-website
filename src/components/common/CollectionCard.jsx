@@ -21,12 +21,12 @@ const CollectionCard = ({ name, image, mobile = false, onClick }) => {
   return (
     <div className="group cursor-pointer relative w-full" onClick={onClick ? onClick : undefined}>
       {/* Image Container */}
-      <div className={`relative ${cardSize} mb-2 sm:mb-3 md:mb-4`}>
+      <div className={`relative ${cardSize} mb-2 sm:mb-3 md:mb-4 bg-[#F8F8F8] rounded-[10px]`}>
         {/* Background Image */}
         <img
           src={image}
           alt={name}
-          className="absolute inset-0 w-full h-full rounded-[10px] object-cover"
+          className="absolute inset-0 w-full h-full rounded-[10px] object-contain p-2"
         />
 
         {/* Dark Overlay - rgba(0, 0, 0, 0.4) */}
