@@ -25,7 +25,7 @@ const Collections = () => {
             .filter(cat => cat.is_active === 1)
             .map(cat => {
               // Validate image URL from API
-              const imageUrl = cat.url_image || cat.img_url || cat.image_url || cat.image;
+              const imageUrl = cat.img_item || cat.url_image || cat.img_url || cat.image_url || cat.image;
               const isValidImageUrl = imageUrl && 
                 (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) &&
                 imageUrl.length > 10;
