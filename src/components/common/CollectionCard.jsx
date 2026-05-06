@@ -29,8 +29,6 @@ const CollectionCard = ({ name, image, mobile = false, onClick }) => {
           className="absolute inset-0 w-full h-full rounded-[10px] object-contain p-2"
         />
 
-        {/* Dark Overlay - rgba(0, 0, 0, 0.4) */}
-        <div className="absolute inset-0 bg-black/40 rounded-[10px] group-hover:bg-black/30 transition-colors duration-300" />
       </div>
 
       {/* Bottom Section - Label + Arrow Button */}
