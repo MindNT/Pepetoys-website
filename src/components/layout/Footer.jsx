@@ -1,4 +1,5 @@
 import React from 'react';
+import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from 'lucide-react';
 
 const Footer = () => {
     return (
@@ -24,28 +25,37 @@ const Footer = () => {
                     </div>
 
                     {/* Contact Column */}
-                    <div className="flex flex-col space-y-2">
-                        <h4 className="font-bold text-sm md:text-base font-sans">Contacto</h4>
-                        <ul className="space-y-1 text-xs md:text-sm text-gray-300 font-sans">
-                            <li>info@pepestoys.com</li>
-                            <li>+52 55 1234 5678</li>
-                            <li>Ciudad de México, México</li>
+                    <div className="flex flex-col space-y-3">
+                        <h4 className="font-bold text-sm md:text-base font-sans text-white">Contacto</h4>
+                        <ul className="space-y-3 text-xs md:text-sm text-gray-300 font-sans">
+                            <li className="flex items-center gap-3 hover:text-white transition-colors cursor-pointer group">
+                                <div className="bg-white/10 p-1.5 md:p-2 rounded-full group-hover:bg-[#008F24] transition-colors"><Mail size={16} /></div>
+                                <span>info@pepestoys.com</span>
+                            </li>
+                            <li className="flex items-center gap-3 hover:text-white transition-colors cursor-pointer group">
+                                <div className="bg-white/10 p-1.5 md:p-2 rounded-full group-hover:bg-[#008F24] transition-colors"><Phone size={16} /></div>
+                                <span>+52 55 1234 5678</span>
+                            </li>
+                            <li className="flex items-center gap-3 hover:text-white transition-colors cursor-pointer group">
+                                <div className="bg-white/10 p-1.5 md:p-2 rounded-full group-hover:bg-[#008F24] transition-colors"><MapPin size={16} /></div>
+                                <span>Ciudad de México, México</span>
+                            </li>
                         </ul>
                     </div>
 
                     {/* Newsletter / Social */}
-                    <div className="flex flex-col space-y-2">
-                        <h4 className="font-bold text-sm md:text-base font-sans">Síguenos</h4>
-                        <div className="flex space-x-3">
+                    <div className="flex flex-col space-y-3">
+                        <h4 className="font-bold text-sm md:text-base font-sans text-white">Síguenos</h4>
+                        <div className="flex space-x-4 pt-1">
                             {/* Social Icons */}
-                            <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center hover:bg-brand-green transition-colors cursor-pointer">
-                                <span className="text-[10px]">FB</span>
+                            <div className="w-9 h-9 md:w-10 md:h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#008F24] hover:scale-110 transition-all duration-300 cursor-pointer shadow-sm">
+                                <Facebook size={18} className="text-white" />
                             </div>
-                            <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center hover:bg-brand-green transition-colors cursor-pointer">
-                                <span className="text-[10px]">IG</span>
+                            <div className="w-9 h-9 md:w-10 md:h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#008F24] hover:scale-110 transition-all duration-300 cursor-pointer shadow-sm">
+                                <Instagram size={18} className="text-white" />
                             </div>
-                            <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center hover:bg-brand-green transition-colors cursor-pointer">
-                                <span className="text-[10px]">TW</span>
+                            <div className="w-9 h-9 md:w-10 md:h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-[#008F24] hover:scale-110 transition-all duration-300 cursor-pointer shadow-sm">
+                                <Twitter size={18} className="text-white" />
                             </div>
                         </div>
                     </div>
