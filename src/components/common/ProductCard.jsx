@@ -52,7 +52,7 @@ const ProductCard = ({ product, onOpenModal, onQuickAdd, isAdded }) => {
 
                 {/* Price + Detalles row */}
                 <div className="flex items-center justify-between gap-2 mt-1">
-                    <span className="font-['Inter'] font-bold text-[16px] sm:text-[17px] md:text-[19px] text-gray-600 whitespace-nowrap truncate">
+                    <span className="font-['Inter'] font-bold text-[16px] sm:text-[17px] md:text-[19px] text-gray-500 whitespace-nowrap truncate">
                         ${product.price.replace(' MXN', '').replace('$', '').trim()}
                     </span>
 

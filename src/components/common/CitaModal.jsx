@@ -4,15 +4,15 @@ import { X, MessageCircle } from 'lucide-react';
 const CitaModal = ({ isOpen, onClose }) => {
     const [nombre, setNombre] = useState('');
     const [numero, setNumero] = useState('');
-    const [correo, setCorreo] = useState('');
+    const [estado, setEstado] = useState('');
 
     if (!isOpen) return null;
 
     const phoneNumber = "525578343150";
-    const message = `Hola, me interesa agendar una cita para el servicio de diseño de recintos y aviarios.\n\nMis datos:\n- Nombre: ${nombre}\n- Número: ${numero}\n- Correo: ${correo}`;
+    const message = `Hola, me interesa agendar una cita para el servicio de diseño de recintos y aviarios.\n\nMis datos:\n- Nombre: ${nombre}\n- Número: ${numero}\n- Estado: ${estado}`;
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
 
-    const isFormValid = nombre.trim() !== '' && numero.trim() !== '' && correo.trim() !== '';
+    const isFormValid = nombre.trim() !== '' && numero.trim() !== '' && estado.trim() !== '';
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
@@ -94,10 +94,10 @@ const CitaModal = ({ isOpen, onClose }) => {
                                 required
                             />
                             <input
-                                type="email"
-                                placeholder="Correo electrónico"
-                                value={correo}
-                                onChange={(e) => setCorreo(e.target.value)}
+                                type="text"
+                                placeholder="Estado / Ciudad"
+                                value={estado}
+                                onChange={(e) => setEstado(e.target.value)}
                                 className="w-full md:w-1/2 px-4 py-2 md:py-2.5 rounded-xl text-sm md:text-base text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#E11D48] bg-white/95 shadow-sm"
                                 required
                             />
