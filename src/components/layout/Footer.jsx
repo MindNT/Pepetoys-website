@@ -54,6 +54,14 @@ const Footer = () => {
                                 <Twitter size={18} className="text-white" />
                             </div>
                         </div>
+                        
+                        <div className="pt-4">
+                            <img
+                                src={`${import.meta.env.BASE_URL}9a56523df5887e32ef435d833bbd7b4e5b4f94e4.png`}
+                                alt="Pepe's Toys Logo"
+                                className="h-[45px] w-auto drop-shadow-lg opacity-90"
+                            />
+                        </div>
                     </div>
                 </div>
 

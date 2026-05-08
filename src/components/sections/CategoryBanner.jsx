@@ -156,15 +156,6 @@ const CategoryBanner = () => {
                 </div>
 
             </div>
-
-            {/* Logo Flotante: Reducido a 35px para la nueva altura */}
-            <div className="absolute top-2 right-3 md:top-3 md:right-8 z-30 pointer-events-none">
-                <img
-                    src={`${import.meta.env.BASE_URL}9a56523df5887e32ef435d833bbd7b4e5b4f94e4.png`}
-                    alt="Pepe's Toys Logo"
-                    className="h-[35px] md:h-[55px] w-auto drop-shadow-xl"
-                />
-            </div>
         </div>
     );
 };

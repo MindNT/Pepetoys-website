@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Info } from 'lucide-react';
 
 /**
  * ProductCard
@@ -46,23 +46,23 @@ const ProductCard = ({ product, onOpenModal, onQuickAdd, isAdded }) => {
             {/* Bottom info strip — fixed height, never compressed */}
             <div className="flex-shrink-0 px-3 pt-2 pb-3 flex flex-col gap-1 bg-[#F8F8F8]">
                 {/* Title */}
-                <h3 className="font-['Inter'] font-bold text-[13px] leading-[17px] text-[#2c2c2c] truncate">
+                <h3 className="font-['Inter'] font-extrabold tracking-tight text-[18px] sm:text-[22px] md:text-[26px] leading-tight text-[#2c2c2c] truncate w-full">
                     {product.name}
                 </h3>
 
                 {/* Price + Detalles row */}
-                <div className="flex items-center justify-between gap-2">
-                    <span className="font-['Inter'] font-semibold text-[14px] text-[#8A8A8A] whitespace-nowrap">
-                        {product.price.replace(' MXN', '').replace('$', '')} MXN
+                <div className="flex items-center justify-between gap-2 mt-1">
+                    <span className="font-['Inter'] font-bold text-[16px] sm:text-[17px] md:text-[19px] text-[#008F24] whitespace-nowrap truncate">
+                        ${product.price.replace(' MXN', '').replace('$', '').trim()}
                     </span>
 
                     <button
                         onClick={() => onOpenModal(product)}
-                        className="h-[30px] px-4 bg-[#008F24] hover:bg-[#00741d] active:scale-95 rounded-[8px] flex items-center justify-center transition-all duration-200"
+                        className="flex-shrink-0 w-[32px] h-[32px] sm:w-[36px] sm:h-[36px] bg-[#008F24] hover:bg-[#00741d] active:scale-95 rounded-[8px] flex items-center justify-center transition-all duration-200 shadow-sm"
+                        title="Ver detalles"
+                        aria-label="Ver detalles"
                     >
-                        <span className="font-['Inter'] font-normal text-[13px] text-white whitespace-nowrap">
-                            Detalles
-                        </span>
+                        <Info size={18} className="text-white" />
                     </button>
                 </div>
             </div>

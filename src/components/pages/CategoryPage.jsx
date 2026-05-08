@@ -255,7 +255,7 @@ const CategoryPage = () => {
                         </div>
 
                         {/* Product Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8 auto-rows-[300px] md:auto-rows-[340px] lg:auto-rows-[360px]">
+                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 md:gap-6 lg:gap-8 auto-rows-[300px] md:auto-rows-[340px] lg:auto-rows-[360px]">
                             {loading ? (
                                 <div className="col-span-full h-64 flex items-center justify-center">
                                     <span className="text-xl text-[#1248A4] animate-pulse font-medium">Cargando productos...</span>
