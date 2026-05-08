@@ -63,7 +63,7 @@ const Collections = () => {
       <BirdSpeechSection />
       
       <section className="pb-8 md:pb-16 bg-white relative">
-        {/* Responsive grid: 3 cols mobile, 4 cols tablet, 5 cols desktop */}
+        {/* Responsive grid: 2 cols mobile, 4 cols tablet, 5 cols desktop */}
         <div className="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-10">
           {loading ? (
             <div className="flex items-center justify-center py-20">
@@ -78,7 +78,7 @@ const Collections = () => {
               <span className="text-gray-500">No hay categorías disponibles.</span>
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-4 md:gap-x-10 md:gap-y-16 pb-10 md:pb-20">
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 sm:gap-4 md:gap-x-10 md:gap-y-16 pb-10 md:pb-20">
               {categories.map((collection) => (
                 <div key={collection.id} className="flex justify-center w-full">
                   <Link to={`/category/${collection.id}`} className="w-full">

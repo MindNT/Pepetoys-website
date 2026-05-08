@@ -29,16 +29,12 @@ const Footer = () => {
                         <h4 className="font-bold text-sm md:text-base font-sans text-white">Contacto</h4>
                         <ul className="space-y-3 text-xs md:text-sm text-gray-300 font-sans">
                             <li className="flex items-center gap-3 hover:text-white transition-colors cursor-pointer group">
-                                <div className="bg-white/10 p-1.5 md:p-2 rounded-full group-hover:bg-[#008F24] transition-colors"><Mail size={16} /></div>
-                                <span>info@pepestoys.com</span>
-                            </li>
-                            <li className="flex items-center gap-3 hover:text-white transition-colors cursor-pointer group">
                                 <div className="bg-white/10 p-1.5 md:p-2 rounded-full group-hover:bg-[#008F24] transition-colors"><Phone size={16} /></div>
-                                <span>+52 55 1234 5678</span>
+                                <span>+52 55 7834 3150</span>
                             </li>
                             <li className="flex items-center gap-3 hover:text-white transition-colors cursor-pointer group">
                                 <div className="bg-white/10 p-1.5 md:p-2 rounded-full group-hover:bg-[#008F24] transition-colors"><MapPin size={16} /></div>
-                                <span>Ciudad de México, México</span>
+                                <span>Gran Plaza, Gonzalo Guerrero, 97118 Mérida, Yuc.</span>
                             </li>
                         </ul>
                     </div>
