@@ -3,9 +3,12 @@ import { X, Plus, Minus, Trash2, ShoppingBag, Loader2, MapPin, Store, Truck } fr
 import { useCart } from '../../context/CartContext';
 import ConfirmDialog from './ConfirmDialog';
 import OrderSuccessModal from './OrderSuccessModal';
-import { saveOrder, verifyCustomerPhone, addCustomer, createPaymentPreference } from '../../services/api';
+import { saveOrder, verifyCustomerPhone, addCustomer } from '../../services/api';
 
 const BASE_URL = import.meta.env.BASE_URL;
+
+// VARIABLE DE DESCUENTO GLOBAL (ej: 0.15 = 15%). Pon 0 para desactivar.
+const GLOBAL_DISCOUNT_RATE = 0.15;
 
 const CartDrawer = () => {
   const {
@@ -26,7 +29,8 @@ const CartDrawer = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [phone, setPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
-  const [deliveryOption, setDeliveryOption] = useState(''); // 'pickup', 'merida', 'exterior'
+  const [deliveryOption, setDeliveryOption] = useState(''); // 'pickup', 'exterior'
+  const [paymentMethod, setPaymentMethod] = useState(''); // 'Efectivo', 'Tarjeta', 'Transferencia', 'Mercado Pago'
   const [orderSuccessData, setOrderSuccessData] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -42,6 +46,25 @@ const CartDrawer = () => {
     postalCode: '',
     deliveryPhone: ''
   });
+
+  // --- Cálculos de Totales ---
+  const itemsTotal = getTotalPrice(); // Total antes de promociones
+  const discountAmount = itemsTotal * GLOBAL_DISCOUNT_RATE;
+  const netItemsTotal = itemsTotal - discountAmount;
+  
+  let calculatedShipping = 230; 
+  if (itemsTotal <= 1000) {
+    calculatedShipping = 230;
+  } else if (itemsTotal <= 3000) {
+    calculatedShipping = 250;
+  } else if (itemsTotal <= 4000) {
+    calculatedShipping = 300;
+  } else {
+    calculatedShipping = 350; // Para mayores a 4000 (incluyendo 5000 en adelante)
+  }
+  
+  const shippingCost = deliveryOption === 'exterior' ? calculatedShipping : 0;
+  const finalTotal = netItemsTotal + shippingCost;
 
   const handleCheckout = () => {
     if (cartItems.length === 0) {
@@ -60,13 +83,13 @@ const CartDrawer = () => {
         items[String(item.id)] = item.quantity;
       });
 
-      // Preparar datos del pedido
-      const totalAmount = parseFloat(getTotalPrice().toFixed(2));
+      // Preparar datos del pedido usando el finalTotal ya calculado
+      const totalAmount = parseFloat(finalTotal.toFixed(2));
 
       // Construir string de dirección si no es pickup
       let addressString = null;
-      if (deliveryOption === 'merida' || deliveryOption === 'exterior') {
-        addressString = `Nombre: ${addressData.recipientName}, Calle: ${addressData.street}, Número: ${addressData.number}, Entre calle: ${addressData.crossStreet}, Colonia: ${addressData.neighborhood}, Color fachada: ${addressData.facadeColor}, Código postal: ${addressData.postalCode}, Teléfono: ${addressData.deliveryPhone}`;
+      if (deliveryOption === 'exterior') {
+        addressString = `Envio Exterior - Nombre: ${addressData.recipientName}, Calle: ${addressData.street}, Número: ${addressData.number}, Entre calle: ${addressData.crossStreet}, Colonia: ${addressData.neighborhood}, Color fachada: ${addressData.facadeColor}, Código postal: ${addressData.postalCode}, Teléfono: ${addressData.deliveryPhone}`;
       }
 
       const orderData = {
@@ -74,8 +97,8 @@ const CartDrawer = () => {
         items: items,
         total_amount: totalAmount,
         promotions: {},
-        // Solo Pickup no envía dirección, Mérida y Exterior sí
-        maps_url: addressString
+        maps_url: deliveryOption === 'exterior' ? addressString : 'PickUp',
+        payment_method: paymentMethod
       };
 
       console.log('Enviando pedido:', JSON.stringify(orderData, null, 2));
@@ -84,17 +107,32 @@ const CartDrawer = () => {
       const response = await saveOrder(orderData);
 
       if (response) {
-        // Preparar datos para el modal de éxito
-        const successData = {
-          orderCode: orderData.code_order || response.order_code || response.data?.order_code || `ORD-${Date.now()}`,
-          phone: phoneDigits,
-          items: cartItems,
-          totalAmount: totalAmount,
-          customerName: customerName || response.customer_name || response.data?.customer_name
-        };
+        const generatedCode = orderData.code_order || response.order_code || response.data?.code_order || `ORD-${Date.now()}`;
+        const generatedCustomerName = customerName || response.customer_name || response.data?.customer_name || "Cliente";
+        
+        // Construir mensaje de WhatsApp
+        let itemsText = cartItems.map(item => `- ${item.quantity}x ${item.name} ($${(item.priceNumber || 0).toFixed(2)} c/u)`).join('\n');
+        
+        let deliveryText = deliveryOption === 'pickup' 
+          ? 'PickUp en Tienda' 
+          : `Envío Exterior\nDirección:\n${addressString.replace('Envio Exterior - ', '')}`;
 
-        // Guardar datos del pedido exitoso
-        setOrderSuccessData(successData);
+        const waMessage = `¡Hola! Acabo de realizar un pedido.
+        
+*Código de Pedido:* ${generatedCode}
+*Cliente:* ${generatedCustomerName}
+*Teléfono:* ${phoneDigits}
+*Entrega:* ${deliveryText}
+*Método de Pago:* ${paymentMethod}
+
+*Resumen del Pedido:*
+${itemsText}
+${GLOBAL_DISCOUNT_RATE > 0 ? `\n*Subtotal Artículos:* $${itemsTotal.toFixed(2)}\n*Descuento (${(GLOBAL_DISCOUNT_RATE * 100).toFixed(0)}%):* -$${discountAmount.toFixed(2)}` : ''}
+${deliveryOption === 'exterior' ? `\n*Costo de Envío:* $${shippingCost.toFixed(2)}` : ''}
+
+*Total a Pagar:* $${finalTotal.toFixed(2)} MXN`;
+
+        const waUrl = `https://wa.me/525578343150?text=${encodeURIComponent(waMessage)}`;
 
         // Limpiar carrito y estados
         clearCart();
@@ -102,6 +140,7 @@ const CartDrawer = () => {
         setShowNameDialog(false);
         setShowDeliveryDialog(false);
         setDeliveryOption('');
+        setPaymentMethod('');
         setAddressData({
           recipientName: '',
           street: '',
@@ -114,8 +153,8 @@ const CartDrawer = () => {
         });
         closeCart();
 
-        // Mostrar modal de éxito
-        setShowSuccessModal(true);
+        // Abrir WhatsApp
+        window.open(waUrl, '_blank', 'noopener,noreferrer');
       } else {
         throw new Error('No se recibió respuesta del servidor');
       }
@@ -216,6 +255,12 @@ const CartDrawer = () => {
   // Manejar selección de opción de entrega
   const handleDeliveryOptionChange = (option) => {
     setDeliveryOption(option);
+    // Si es exterior, forzar Mercado Pago
+    if (option === 'exterior') {
+      setPaymentMethod('Mercado Pago');
+    } else {
+      setPaymentMethod('');
+    }
     // Limpiar datos de dirección si cambia de opción
     if (option === 'pickup') {
       setAddressData({
@@ -241,22 +286,20 @@ const CartDrawer = () => {
 
   // Validar y confirmar opción de entrega
   const handleDeliveryConfirm = async () => {
-    const total = getTotalPrice();
-
-    // Validar que se haya seleccionado una opción
+    // Validar que se haya seleccionado una opción de entrega
     if (!deliveryOption) {
       alert('Por favor selecciona un método de entrega');
       return;
     }
 
-    // Validar mínimo para Mérida (debe ser >= 1000)
-    if (deliveryOption === 'merida' && total < 1000) {
-      alert('El pedido mínimo para envío a Mérida es de $1,000 MXN');
+    // Validar método de pago
+    if (!paymentMethod) {
+      alert('Por favor selecciona un método de pago');
       return;
     }
 
-    // Validar campos de dirección para Mérida y Exterior
-    if (deliveryOption === 'merida' || deliveryOption === 'exterior') {
+    // Validar campos de dirección para Exterior
+    if (deliveryOption === 'exterior') {
       const requiredFields = [
         { field: 'recipientName', label: 'Nombre de quien recibe' },
         { field: 'street', label: 'Calle' },
@@ -276,28 +319,15 @@ const CartDrawer = () => {
       }
     }
 
-    const totalAmount = parseFloat(getTotalPrice().toFixed(2));
     setIsSubmitting(true);
 
     try {
-      // 1. Primero guardar el pedido en el backend
+      // Guardar el pedido en el backend y abrir WhatsApp
       const phoneDigits = phone.replace(/\D/g, '');
       await submitOrder(phoneDigits);
-
-      // 2. Luego crear la preferencia de pago en MercadoPago
-      const paymentResponse = await createPaymentPreference(totalAmount);
-      const checkoutUrl = paymentResponse?.data?.init_point || paymentResponse?.data?.sandbox_init_point;
-
-      if (!checkoutUrl) {
-        throw new Error('No se recibió la URL de pago del servidor');
-      }
-
-      // 3. Abrir MercadoPago en una nueva pestaña (sin salir de la app)
-      window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
-
+      setIsSubmitting(false);
     } catch (error) {
-      console.error('Error al procesar el pago:', error);
-      alert(error.message || 'Error al iniciar el pago. Por favor intenta de nuevo.');
+      console.error('Error al procesar el pedido:', error);
       setIsSubmitting(false);
     }
   };
@@ -318,6 +348,7 @@ const CartDrawer = () => {
   const handleDeliveryCancel = () => {
     setShowDeliveryDialog(false);
     setDeliveryOption('');
+    setPaymentMethod('');
     setAddressData({
       recipientName: '',
       street: '',
@@ -470,13 +501,33 @@ const CartDrawer = () => {
         {/* Footer - Total y Checkout */}
         {cartItems.length > 0 && (
           <div className="border-t border-gray-200 px-4 md:px-6 py-5 md:py-5 bg-gray-50">
-            {/* Subtotal */}
+            {/* Subtotal de artículos */}
             <div className="flex items-center justify-between mb-2">
-              <span className="text-base md:text-sm text-gray-600">Subtotal:</span>
+              <span className="text-base md:text-sm text-gray-600">Subtotal de artículos:</span>
               <span className="text-xl md:text-lg font-semibold text-gray-800">
-                ${getTotalPrice().toFixed(2)} MXN
+                ${itemsTotal.toFixed(2)} MXN
               </span>
             </div>
+
+            {/* Discount (if applicable) */}
+            {GLOBAL_DISCOUNT_RATE > 0 && (
+              <div className="flex items-center justify-between mb-2 text-green-600">
+                <span className="text-base md:text-sm">Descuento ({(GLOBAL_DISCOUNT_RATE * 100).toFixed(0)}%):</span>
+                <span className="text-xl md:text-lg font-semibold">
+                  -${discountAmount.toFixed(2)} MXN
+                </span>
+              </div>
+            )}
+
+            {/* Shipping (if exterior) */}
+            {deliveryOption === 'exterior' && (
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-base md:text-sm text-gray-600">Costo de Envío:</span>
+                <span className="text-xl md:text-lg font-semibold text-gray-800">
+                  ${shippingCost.toFixed(2)} MXN
+                </span>
+              </div>
+            )}
 
             {/* Total Items */}
             <div className="flex items-center justify-between mb-4">
@@ -488,9 +539,9 @@ const CartDrawer = () => {
 
             {/* Total Grande */}
             <div className="flex items-center justify-between mb-5 py-3 border-t border-gray-300">
-              <span className="text-2xl md:text-xl font-bold text-[#1A237E]">Total:</span>
+              <span className="text-2xl md:text-xl font-bold text-[#1A237E]">Total a Pagar:</span>
               <span className="text-3xl md:text-2xl font-bold text-[#1A237E]">
-                ${getTotalPrice().toFixed(2)} MXN
+                ${finalTotal.toFixed(2)} MXN
               </span>
             </div>
 
@@ -626,34 +677,7 @@ const CartDrawer = () => {
                 </div>
               </label>
 
-              {/* Mérida */}
-              <label
-                className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${deliveryOption === 'merida'
-                  ? 'border-[#008F24] bg-[#008F24]/5'
-                  : 'border-gray-200 hover:border-gray-300'
-                  }`}
-              >
-                <input
-                  type="radio"
-                  name="delivery"
-                  value="merida"
-                  checked={deliveryOption === 'merida'}
-                  onChange={() => handleDeliveryOptionChange('merida')}
-                  className="mt-1 w-5 h-5 text-[#008F24] focus:ring-[#008F24]"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Truck size={20} className="text-[#1A237E]" />
-                    <span className="font-semibold text-gray-900">Envío a Mérida</span>
-                  </div>
-                  <p className="text-sm text-gray-600">Pedido mínimo: $1,000 MXN</p>
-                  {deliveryOption === 'merida' && getTotalPrice() < 1000 && (
-                    <p className="text-sm text-red-600 mt-1">
-                      ⚠️ Total actual: ${getTotalPrice().toFixed(2)} MXN
-                    </p>
-                  )}
-                </div>
-              </label>
+
 
               {/* Exterior */}
               <label
@@ -675,13 +699,51 @@ const CartDrawer = () => {
                     <MapPin size={20} className="text-[#1A237E]" />
                     <span className="font-semibold text-gray-900">Envío a Exterior</span>
                   </div>
-                  <p className="text-sm text-gray-600">Costo por calcular</p>
+                  <p className="text-sm text-gray-600">Costo de envío: ${calculatedShipping.toFixed(2)} MXN</p>
                 </div>
               </label>
             </div>
 
-            {/* Address Form - Only show when Mérida or Exterior is selected */}
-            {(deliveryOption === 'merida' || deliveryOption === 'exterior') && (
+            {/* Payment Options */}
+            {deliveryOption === 'pickup' && (
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-[#1A237E] mb-3">Método de Pago</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {['Efectivo', 'Tarjeta', 'Transferencia'].map((method) => (
+                    <label
+                      key={method}
+                      className={`flex items-center justify-center py-3 px-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        paymentMethod === method
+                          ? 'border-[#008F24] bg-[#008F24]/5 text-[#008F24] font-semibold'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="payment"
+                        value={method}
+                        checked={paymentMethod === method}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="hidden"
+                      />
+                      <span>{method}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {deliveryOption === 'exterior' && (
+              <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 flex items-center gap-3">
+                <div className="text-blue-700">
+                  <p className="font-semibold text-sm">Método de pago para envíos:</p>
+                  <p className="text-sm">El pago se realizará únicamente a través de Mercado Pago. Al confirmar, se abrirá WhatsApp con los detalles de tu pedido para recibir el link de pago.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Address Form - Only show when Exterior is selected */}
+            {(deliveryOption === 'exterior') && (
               <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <h4 className="text-lg font-semibold text-[#1A237E] mb-4">Datos de Entrega</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
