@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, Trash2, ShoppingBag, Loader2, MapPin, Store, Truck } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import ConfirmDialog from './ConfirmDialog';
 import OrderSuccessModal from './OrderSuccessModal';
-import { saveOrder, verifyCustomerPhone, addCustomer } from '../../services/api';
+import { saveOrder, verifyCustomerPhone, addCustomer, getCategories, createPaymentPreference } from '../../services/api';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
 // VARIABLE DE DESCUENTO GLOBAL (ej: 0.15 = 15%). Pon 0 para desactivar.
 const GLOBAL_DISCOUNT_RATE = 0.15;
+
+// ARTÍCULOS QUE REQUIEREN COTIZACIÓN DE ENVÍO MANUAL
+const RESTRICTED_ITEMS = [123, 122, 124];
+const EXCLUSIVE_CATEGORY = 23;
 
 const CartDrawer = () => {
   const {
@@ -47,23 +51,65 @@ const CartDrawer = () => {
     deliveryPhone: ''
   });
 
+  const [voladerasIds, setVoladerasIds] = useState([EXCLUSIVE_CATEGORY]);
+
+  useEffect(() => {
+    const fetchVoladerasCategories = async () => {
+      try {
+        const catsResponse = await getCategories();
+        if (catsResponse.status === 'success' && catsResponse.data) {
+          // Filtrar como en VoladerasModal: por nombre de la categoría
+          const dynamicIds = catsResponse.data
+            .filter(cat => cat.name.toLowerCase().includes('voladera'))
+            .map(cat => cat.id);
+            
+          if (dynamicIds.length > 0) {
+            // Combinar el ID 23 por defecto con los que encontremos por nombre
+            setVoladerasIds(prev => [...new Set([...prev, ...dynamicIds])]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching categories for voladeras:', error);
+      }
+    };
+    
+    if (isCartOpen) {
+      fetchVoladerasCategories();
+    }
+  }, [isCartOpen]);
+
   // --- Cálculos de Totales ---
   const itemsTotal = getTotalPrice(); // Total antes de promociones
   const discountAmount = itemsTotal * GLOBAL_DISCOUNT_RATE;
   const netItemsTotal = itemsTotal - discountAmount;
   
+  const hasRestrictedItem = cartItems.some(item => RESTRICTED_ITEMS.includes(Number(item.id)));
+  const hasExclusiveCategory = cartItems.some(item => {
+    // Revisar si algún ID de las categorías dinámicas (o el 23) coincide
+    if (Array.isArray(item.category_ids)) {
+      return item.category_ids.some(id => voladerasIds.includes(Number(id)));
+    }
+    return voladerasIds.includes(Number(item.category_id));
+  });
+  
   let calculatedShipping = 230; 
-  if (itemsTotal <= 1000) {
-    calculatedShipping = 230;
-  } else if (itemsTotal <= 3000) {
-    calculatedShipping = 250;
-  } else if (itemsTotal <= 4000) {
-    calculatedShipping = 300;
+  if (hasExclusiveCategory) {
+    calculatedShipping = 2500;
   } else {
-    calculatedShipping = 350; // Para mayores a 4000 (incluyendo 5000 en adelante)
+    if (itemsTotal <= 1000) {
+      calculatedShipping = 230;
+    } else if (itemsTotal <= 3000) {
+      calculatedShipping = 250;
+    } else if (itemsTotal <= 4000) {
+      calculatedShipping = 300;
+    } else {
+      calculatedShipping = 350; // Para mayores a 4000 (incluyendo 5000 en adelante)
+    }
   }
   
-  const shippingCost = deliveryOption === 'exterior' ? calculatedShipping : 0;
+  const isShippingPending = deliveryOption === 'exterior' && hasRestrictedItem;
+  
+  const shippingCost = (deliveryOption === 'exterior' && !isShippingPending) ? calculatedShipping : 0;
   const finalTotal = netItemsTotal + shippingCost;
 
   const handleCheckout = () => {
@@ -128,9 +174,9 @@ const CartDrawer = () => {
 *Resumen del Pedido:*
 ${itemsText}
 ${GLOBAL_DISCOUNT_RATE > 0 ? `\n*Subtotal Artículos:* $${itemsTotal.toFixed(2)}\n*Descuento (${(GLOBAL_DISCOUNT_RATE * 100).toFixed(0)}%):* -$${discountAmount.toFixed(2)}` : ''}
-${deliveryOption === 'exterior' ? `\n*Costo de Envío:* $${shippingCost.toFixed(2)}` : ''}
+${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'Pendiente' : `$${shippingCost.toFixed(2)}`}` : ''}
 
-*Total a Pagar:* $${finalTotal.toFixed(2)} MXN`;
+*Total a Pagar:* $${finalTotal.toFixed(2)} MXN ${isShippingPending ? '(Envío pendiente de cotización)' : ''}`;
 
         const waUrl = `https://wa.me/525578343150?text=${encodeURIComponent(waMessage)}`;
 
@@ -153,8 +199,22 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* $${shippingCost.toFixed(
         });
         closeCart();
 
-        // Abrir WhatsApp
+        // Abrir WhatsApp (siempre)
         window.open(waUrl, '_blank', 'noopener,noreferrer');
+
+        // Si el envío NO está pendiente, también abrir MercadoPago
+        if (!isShippingPending) {
+          try {
+            const paymentResponse = await createPaymentPreference(totalAmount);
+            const checkoutUrl = paymentResponse?.data?.init_point || paymentResponse?.data?.sandbox_init_point;
+            if (checkoutUrl) {
+              window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+            }
+          } catch (paymentError) {
+            console.error('Error al crear preferencia de pago:', paymentError);
+            // No bloquear el flujo, el pedido ya fue guardado y WhatsApp ya abrió
+          }
+        }
       } else {
         throw new Error('No se recibió respuesta del servidor');
       }
@@ -524,7 +584,7 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* $${shippingCost.toFixed(
               <div className="flex items-center justify-between mb-2">
                 <span className="text-base md:text-sm text-gray-600">Costo de Envío:</span>
                 <span className="text-xl md:text-lg font-semibold text-gray-800">
-                  ${shippingCost.toFixed(2)} MXN
+                  {isShippingPending ? 'Pendiente' : `$${shippingCost.toFixed(2)} MXN`}
                 </span>
               </div>
             )}
@@ -540,8 +600,9 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* $${shippingCost.toFixed(
             {/* Total Grande */}
             <div className="flex items-center justify-between mb-5 py-3 border-t border-gray-300">
               <span className="text-2xl md:text-xl font-bold text-[#1A237E]">Total a Pagar:</span>
-              <span className="text-3xl md:text-2xl font-bold text-[#1A237E]">
-                ${finalTotal.toFixed(2)} MXN
+              <span className="text-3xl md:text-2xl font-bold text-[#1A237E] flex flex-col items-end">
+                <span>${finalTotal.toFixed(2)} MXN</span>
+                {isShippingPending && <span className="text-sm font-normal text-orange-600">Envío no incluido</span>}
               </span>
             </div>
 
@@ -699,7 +760,7 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* $${shippingCost.toFixed(
                     <MapPin size={20} className="text-[#1A237E]" />
                     <span className="font-semibold text-gray-900">Envío a Exterior</span>
                   </div>
-                  <p className="text-sm text-gray-600">Costo de envío: ${calculatedShipping.toFixed(2)} MXN</p>
+                  <p className="text-sm text-gray-600">Costo de envío: {hasRestrictedItem ? 'Pendiente' : `$${calculatedShipping.toFixed(2)} MXN`}</p>
                 </div>
               </label>
             </div>
