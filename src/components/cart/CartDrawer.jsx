@@ -38,6 +38,7 @@ const CartDrawer = () => {
   const [orderSuccessData, setOrderSuccessData] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [mpCheckoutUrl, setMpCheckoutUrl] = useState(null);
 
   // Address form fields
   const [addressData, setAddressData] = useState({
@@ -180,8 +181,7 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
 
         const waUrl = `https://wa.me/525578343150?text=${encodeURIComponent(waMessage)}`;
 
-        // Limpiar carrito y estados
-        clearCart();
+        // Limpiar estados (no limpiamos el carrito para no perder contexto)
         setShowPhoneDialog(false);
         setShowNameDialog(false);
         setShowDeliveryDialog(false);
@@ -213,7 +213,7 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
             const paymentResponse = await createPaymentPreference(totalAmount);
             const checkoutUrl = paymentResponse?.data?.init_point || paymentResponse?.data?.sandbox_init_point;
             if (checkoutUrl) {
-              window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+              setMpCheckoutUrl(checkoutUrl);
             }
           } catch (paymentError) {
             console.error('Error al crear preferencia de pago:', paymentError);
@@ -1025,6 +1025,37 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Mercado Pago Checkout Modal */}
+      {mpCheckoutUrl && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 md:p-8">
+          <div className="bg-white rounded-2xl shadow-2xl w-full h-[90vh] md:h-[95vh] max-w-5xl flex flex-col overflow-hidden relative animate-in fade-in zoom-in duration-300">
+            <div className="flex justify-between items-center p-4 border-b bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-[#009EE3]" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14.072 2.37A2.88 2.88 0 0 0 12 1.5a2.88 2.88 0 0 0-2.072.87L1.24 11.057a2.88 2.88 0 0 0 0 4.071l8.688 8.686A2.88 2.88 0 0 0 12 24.686a2.88 2.88 0 0 0 2.072-.871l8.688-8.687a2.88 2.88 0 0 0 0-4.07L14.072 2.37ZM12 12.345l-4.524 4.524-1.92-1.92L10.08 10.426l-1.92-1.92 1.92-1.92 4.524 4.524 4.524-4.524 1.92 1.92-1.92 1.92 1.92 1.92-1.92 1.92L12 12.345Z"/></svg>
+                </div>
+                <h3 className="text-xl font-bold text-[#1A237E]">Pago Seguro</h3>
+              </div>
+              <button 
+                onClick={() => setMpCheckoutUrl(null)}
+                className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 rounded-full transition-colors"
+                aria-label="Cerrar pago"
+              >
+                <X size={24} strokeWidth={2.5} />
+              </button>
+            </div>
+            <div className="flex-1 w-full bg-gray-50 relative">
+              <iframe 
+                src={mpCheckoutUrl} 
+                className="absolute inset-0 w-full h-full border-none"
+                title="Mercado Pago Checkout"
+                allow="payment"
+              />
+            </div>
           </div>
         </div>
       )}
