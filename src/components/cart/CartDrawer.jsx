@@ -202,8 +202,13 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
         // Abrir WhatsApp (siempre)
         window.open(waUrl, '_blank', 'noopener,noreferrer');
 
-        // Si el envío NO está pendiente, también abrir MercadoPago
-        if (!isShippingPending) {
+        // Abrir MercadoPago solo en estos casos:
+        // - Envío Exterior sin envío pendiente (cualquier método)
+        // - Pickup con método de pago "Tarjeta"
+        const shouldOpenMP = (!isShippingPending && deliveryOption === 'exterior') || 
+                             (deliveryOption === 'pickup' && paymentMethod === 'Tarjeta');
+
+        if (shouldOpenMP) {
           try {
             const paymentResponse = await createPaymentPreference(totalAmount);
             const checkoutUrl = paymentResponse?.data?.init_point || paymentResponse?.data?.sandbox_init_point;
