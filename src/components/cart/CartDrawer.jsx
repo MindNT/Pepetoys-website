@@ -40,6 +40,7 @@ const CartDrawer = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [mpCheckoutUrl, setMpCheckoutUrl] = useState(null);
   const [waCheckoutUrl, setWaCheckoutUrl] = useState(null);
+  const [mpShippingPending, setMpShippingPending] = useState(false);
 
   // Address form fields
   const [addressData, setAddressData] = useState({
@@ -202,11 +203,12 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
 
         // Guardar URL de WhatsApp en estado para uso opcional
         setWaCheckoutUrl(waUrl);
+        setMpShippingPending(isShippingPending);
 
         // Abrir MercadoPago solo en estos casos:
-        // - Envío Exterior sin envío pendiente (cualquier método)
+        // - Envío Exterior (con o sin envío pendiente)
         // - Pickup con método de pago "Tarjeta"
-        const shouldOpenMP = (!isShippingPending && deliveryOption === 'exterior') || 
+        const shouldOpenMP = deliveryOption === 'exterior' || 
                              (deliveryOption === 'pickup' && paymentMethod === 'Tarjeta');
 
         if (shouldOpenMP) {
@@ -1072,7 +1074,9 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
             {waCheckoutUrl && (
               <div className="p-4 bg-white border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <p className="text-sm text-gray-600 text-center sm:text-left flex-1 font-medium">
-                  Si ya completaste el pago, puedes compartirnos tu ticket en WhatsApp para un mejor seguimiento de pedido
+                  {mpShippingPending 
+                    ? "Recuerda que tienes un envío pendiente de calcular, por favor comparte tu ticket en WhatsApp para concluir con la compra" 
+                    : "Si ya completaste el pago, puedes compartirnos tu ticket en WhatsApp para un mejor seguimiento de pedido"}
                 </p>
                 <a 
                   href={waCheckoutUrl} 
