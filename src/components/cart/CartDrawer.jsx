@@ -1072,12 +1072,25 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
             </div>
             {/* Opcional: Enviar Ticket por WhatsApp */}
             {waCheckoutUrl && (
-              <div className="p-4 bg-white border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <p className="text-sm text-gray-600 text-center sm:text-left flex-1 font-medium">
-                  {mpShippingPending 
-                    ? "Recuerda que tienes un envío pendiente de calcular, por favor comparte tu ticket en WhatsApp para concluir con la compra" 
-                    : "Si ya completaste el pago, puedes compartirnos tu ticket en WhatsApp para un mejor seguimiento de pedido"}
-                </p>
+              <div className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${
+                mpShippingPending ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"
+              }`}>
+                <div className="flex-1 flex flex-col sm:flex-row items-center gap-3">
+                  {mpShippingPending && (
+                    <div className="text-amber-600 flex-shrink-0 animate-pulse">
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                  )}
+                  <p className={`text-center sm:text-left font-medium ${
+                    mpShippingPending ? "text-amber-900 text-base" : "text-gray-600 text-sm"
+                  }`}>
+                    {mpShippingPending 
+                      ? <span><strong>¡ACCIÓN REQUERIDA!</strong> Tienes un envío pendiente de calcular. Por favor, <strong>comparte tu ticket en WhatsApp</strong> para concluir con tu compra.</span>
+                      : "Si ya completaste el pago, puedes compartirnos tu ticket en WhatsApp para un mejor seguimiento de pedido"}
+                  </p>
+                </div>
                 <a 
                   href={waCheckoutUrl} 
                   target="_blank" 
