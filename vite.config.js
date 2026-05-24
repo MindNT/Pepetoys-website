@@ -20,7 +20,7 @@ export default defineConfig({
         } catch (error) {
           console.warn('⚠ No se pudo copiar .nojekyll:', error.message)
         }
-        
+
         // Copiar 404.html a dist para GitHub Pages SPA routing
         try {
           copyFileSync(
@@ -37,6 +37,6 @@ export default defineConfig({
   // IMPORTANTE: Cambia esto al nombre EXACTO de tu repositorio en GitHub
   // Si tu repositorio se llama "pepes-toys", cambia a: base: '/pepes-toys/'
   // Si tu repositorio se llama "Pepetoys-website", deja como está
-  base: '/Pepetoys-website/',
+  base: '/', // <-- Esto es clave para que encuentre tus archivos JS y CSS
 })
 
