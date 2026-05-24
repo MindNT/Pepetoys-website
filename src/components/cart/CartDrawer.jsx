@@ -146,7 +146,7 @@ const CartDrawer = () => {
         items: items,
         total_amount: totalAmount,
         promotions: {},
-        maps_url: deliveryOption === 'exterior' ? addressString : 'PickUp',
+        maps_url: isShippingPending ? 'ENVIO PENDIENTE' : (deliveryOption === 'exterior' ? addressString : 'PickUp'),
         payment_method: paymentMethod
       };
 
