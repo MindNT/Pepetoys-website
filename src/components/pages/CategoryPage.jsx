@@ -95,7 +95,9 @@ const CategoryPage = () => {
                         image: formattedImageUrl,
                         available_days: item.available_days,
                         atributo_1: item.atributo_1,
-                        atributo_2: item.atributo_2
+                        atributo_2: item.atributo_2,
+                        category_id: item.category_id,
+                        category_ids: Array.isArray(item.category_ids) ? item.category_ids : (item.category_id ? [item.category_id] : [])
                     };
                 });
                 
