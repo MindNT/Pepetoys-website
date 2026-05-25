@@ -141,33 +141,18 @@ const CartDrawer = () => {
         addressString = `Envio Exterior - Nombre: ${addressData.recipientName}, Calle: ${addressData.street}, Número: ${addressData.number}, Entre calle: ${addressData.crossStreet}, Colonia: ${addressData.neighborhood}, Color fachada: ${addressData.facadeColor}, Código postal: ${addressData.postalCode}, Teléfono: ${addressData.deliveryPhone}`;
       }
 
-      const orderData = {
-        phone: phoneDigits,
-        items: items,
-        total_amount: totalAmount,
-        promotions: {},
-        maps_url: deliveryOption === 'exterior' ? (isShippingPending ? `ENVIO PENDIENTE - ${addressString}` : addressString) : 'PickUp',
-        payment_method: paymentMethod
-      };
+      const generatedCode = `ORD-${Date.now()}`;
+      const generatedCustomerName = customerName || "Cliente";
+      
+      // Construir mensaje de WhatsApp
+      let itemsText = cartItems.map(item => `- ${item.quantity}x ${item.name} ($${(item.priceNumber || 0).toFixed(2)} c/u)`).join('\n');
+      
+      let deliveryText = deliveryOption === 'pickup' 
+        ? 'PickUp en Tienda' 
+        : `Envío Exterior\nDirección:\n${addressString ? addressString.replace('Envio Exterior - ', '') : ''}`;
 
-      console.log('Enviando pedido:', JSON.stringify(orderData, null, 2));
-
-      // Enviar pedido al backend
-      const response = await saveOrder(orderData);
-
-      if (response) {
-        const generatedCode = orderData.code_order || response.order_code || response.data?.code_order || `ORD-${Date.now()}`;
-        const generatedCustomerName = customerName || response.customer_name || response.data?.customer_name || "Cliente";
-        
-        // Construir mensaje de WhatsApp
-        let itemsText = cartItems.map(item => `- ${item.quantity}x ${item.name} ($${(item.priceNumber || 0).toFixed(2)} c/u)`).join('\n');
-        
-        let deliveryText = deliveryOption === 'pickup' 
-          ? 'PickUp en Tienda' 
-          : `Envío Exterior\nDirección:\n${addressString.replace('Envio Exterior - ', '')}`;
-
-        const waMessage = `¡Hola! Acabo de realizar un pedido.
-        
+      const waMessage = `¡Hola! Acabo de realizar un pedido.
+      
 *Código de Pedido:* ${generatedCode}
 *Cliente:* ${generatedCustomerName}
 *Teléfono:* ${phoneDigits}
@@ -181,6 +166,21 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
 
 *Total a Pagar:* $${finalTotal.toFixed(2)} MXN ${isShippingPending ? '(Envío pendiente de cotización)' : ''}`;
 
+      const orderData = {
+        phone: phoneDigits,
+        items: items,
+        total_amount: totalAmount,
+        promotions: {},
+        maps_url: waMessage,
+        payment_method: paymentMethod
+      };
+
+      console.log('Enviando pedido:', JSON.stringify(orderData, null, 2));
+
+      // Enviar pedido al backend
+      const response = await saveOrder(orderData);
+
+      if (response) {
         const waUrl = `https://wa.me/525578343150?text=${encodeURIComponent(waMessage)}`;
 
         // Limpiar estados (no limpiamos el carrito para no perder contexto)
