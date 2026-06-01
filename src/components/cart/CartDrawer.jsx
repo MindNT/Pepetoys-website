@@ -97,7 +97,7 @@ const CartDrawer = () => {
 
   let calculatedShipping = 230;
   if (hasExclusiveCategory) {
-    calculatedShipping = 2500;
+    calculatedShipping = 700;
   } else {
     if (itemsTotal <= 1000) {
       calculatedShipping = 230;
