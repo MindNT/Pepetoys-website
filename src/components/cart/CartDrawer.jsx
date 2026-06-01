@@ -65,7 +65,7 @@ const CartDrawer = () => {
           const dynamicIds = catsResponse.data
             .filter(cat => cat.name.toLowerCase().includes('voladera'))
             .map(cat => cat.id);
-            
+
           if (dynamicIds.length > 0) {
             // Combinar el ID 23 por defecto con los que encontremos por nombre
             setVoladerasIds(prev => [...new Set([...prev, ...dynamicIds])]);
@@ -75,7 +75,7 @@ const CartDrawer = () => {
         console.error('Error fetching categories for voladeras:', error);
       }
     };
-    
+
     if (isCartOpen) {
       fetchVoladerasCategories();
     }
@@ -85,7 +85,7 @@ const CartDrawer = () => {
   const itemsTotal = getTotalPrice(); // Total antes de promociones
   const discountAmount = itemsTotal * GLOBAL_DISCOUNT_RATE;
   const netItemsTotal = itemsTotal - discountAmount;
-  
+
   const hasRestrictedItem = cartItems.some(item => RESTRICTED_ITEMS.includes(Number(item.id)));
   const hasExclusiveCategory = cartItems.some(item => {
     // Revisar si algún ID de las categorías dinámicas (o el 23) coincide
@@ -94,10 +94,10 @@ const CartDrawer = () => {
     }
     return voladerasIds.includes(Number(item.category_id));
   });
-  
-  let calculatedShipping = 230; 
+
+  let calculatedShipping = 230;
   if (hasExclusiveCategory) {
-    calculatedShipping = 2500;
+    calculatedShipping = 0;
   } else {
     if (itemsTotal <= 1000) {
       calculatedShipping = 230;
@@ -109,9 +109,9 @@ const CartDrawer = () => {
       calculatedShipping = 350; // Para mayores a 4000 (incluyendo 5000 en adelante)
     }
   }
-  
+
   const isShippingPending = deliveryOption === 'exterior' && hasRestrictedItem;
-  
+
   const shippingCost = (deliveryOption === 'exterior' && !isShippingPending) ? calculatedShipping : 0;
   const finalTotal = netItemsTotal + shippingCost;
 
@@ -143,12 +143,12 @@ const CartDrawer = () => {
 
       const generatedCode = `ORD-${Date.now()}`;
       const generatedCustomerName = customerName || "Cliente";
-      
+
       // Construir mensaje de WhatsApp
       let itemsText = cartItems.map(item => `- ${item.quantity}x ${item.name} ($${(item.priceNumber || 0).toFixed(2)} c/u)`).join('\n');
-      
-      let deliveryText = deliveryOption === 'pickup' 
-        ? 'PickUp en Tienda' 
+
+      let deliveryText = deliveryOption === 'pickup'
+        ? 'PickUp en Tienda'
         : `Envío Exterior\nDirección:\n${addressString ? addressString.replace('Envio Exterior - ', '') : ''}`;
 
       const waMessage = `¡Hola! Acabo de realizar un pedido.
@@ -208,8 +208,8 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
         // Abrir MercadoPago solo en estos casos:
         // - Envío Exterior (con o sin envío pendiente)
         // - Pickup con método de pago "Tarjeta"
-        const shouldOpenMP = deliveryOption === 'exterior' || 
-                             (deliveryOption === 'pickup' && paymentMethod === 'Tarjeta');
+        const shouldOpenMP = deliveryOption === 'exterior' ||
+          (deliveryOption === 'pickup' && paymentMethod === 'Tarjeta');
 
         if (shouldOpenMP) {
           try {
@@ -225,12 +225,12 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
         } else {
           // Mostrar success modal para órdenes que no van a Mercado Pago
           setOrderSuccessData({
-              orderCode: generatedCode,
-              customerName: generatedCustomerName,
-              phone: phoneDigits,
-              items: cartItems,
-              totalAmount: finalTotal,
-              waUrl: waUrl
+            orderCode: generatedCode,
+            customerName: generatedCustomerName,
+            phone: phoneDigits,
+            items: cartItems,
+            totalAmount: finalTotal,
+            waUrl: waUrl
           });
           setShowSuccessModal(true);
         }
@@ -792,11 +792,10 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
                   {['Efectivo', 'Tarjeta', 'Transferencia'].map((method) => (
                     <label
                       key={method}
-                      className={`flex items-center justify-center py-3 px-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        paymentMethod === method
-                          ? 'border-[#008F24] bg-[#008F24]/5 text-[#008F24] font-semibold'
-                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                      }`}
+                      className={`flex items-center justify-center py-3 px-4 border-2 rounded-lg cursor-pointer transition-all ${paymentMethod === method
+                        ? 'border-[#008F24] bg-[#008F24]/5 text-[#008F24] font-semibold'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
                     >
                       <input
                         type="radio"
@@ -812,7 +811,7 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
                 </div>
               </div>
             )}
-            
+
             {deliveryOption === 'exterior' && (
               <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 flex items-center gap-3">
                 <div className="text-blue-700">
@@ -1050,11 +1049,11 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
             <div className="flex justify-between items-center p-4 border-b bg-white">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-[#009EE3]" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14.072 2.37A2.88 2.88 0 0 0 12 1.5a2.88 2.88 0 0 0-2.072.87L1.24 11.057a2.88 2.88 0 0 0 0 4.071l8.688 8.686A2.88 2.88 0 0 0 12 24.686a2.88 2.88 0 0 0 2.072-.871l8.688-8.687a2.88 2.88 0 0 0 0-4.07L14.072 2.37ZM12 12.345l-4.524 4.524-1.92-1.92L10.08 10.426l-1.92-1.92 1.92-1.92 4.524 4.524 4.524-4.524 1.92 1.92-1.92 1.92 1.92 1.92-1.92 1.92L12 12.345Z"/></svg>
+                  <svg className="w-6 h-6 text-[#009EE3]" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14.072 2.37A2.88 2.88 0 0 0 12 1.5a2.88 2.88 0 0 0-2.072.87L1.24 11.057a2.88 2.88 0 0 0 0 4.071l8.688 8.686A2.88 2.88 0 0 0 12 24.686a2.88 2.88 0 0 0 2.072-.871l8.688-8.687a2.88 2.88 0 0 0 0-4.07L14.072 2.37ZM12 12.345l-4.524 4.524-1.92-1.92L10.08 10.426l-1.92-1.92 1.92-1.92 4.524 4.524 4.524-4.524 1.92 1.92-1.92 1.92 1.92 1.92-1.92 1.92L12 12.345Z" /></svg>
                 </div>
                 <h3 className="text-xl font-bold text-[#1A237E]">Pago Seguro</h3>
               </div>
-              <button 
+              <button
                 onClick={() => setMpCheckoutUrl(null)}
                 className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 rounded-full transition-colors"
                 aria-label="Cerrar pago"
@@ -1063,8 +1062,8 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
               </button>
             </div>
             <div className="flex-1 w-full bg-gray-50 relative">
-              <iframe 
-                src={mpCheckoutUrl} 
+              <iframe
+                src={mpCheckoutUrl}
                 className="absolute inset-0 w-full h-full border-none"
                 title="Mercado Pago Checkout"
                 allow="payment"
@@ -1072,9 +1071,8 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
             </div>
             {/* Opcional: Enviar Ticket por WhatsApp */}
             {waCheckoutUrl && (
-              <div className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${
-                mpShippingPending ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"
-              }`}>
+              <div className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${mpShippingPending ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"
+                }`}>
                 <div className="flex-1 flex flex-col sm:flex-row items-center gap-3">
                   {mpShippingPending && (
                     <div className="text-amber-600 flex-shrink-0 animate-pulse">
@@ -1083,21 +1081,20 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
                       </svg>
                     </div>
                   )}
-                  <p className={`text-center sm:text-left font-medium ${
-                    mpShippingPending ? "text-amber-900 text-base" : "text-gray-600 text-sm"
-                  }`}>
-                    {mpShippingPending 
+                  <p className={`text-center sm:text-left font-medium ${mpShippingPending ? "text-amber-900 text-base" : "text-gray-600 text-sm"
+                    }`}>
+                    {mpShippingPending
                       ? <span><strong>¡ACCIÓN REQUERIDA!</strong> Tienes un envío pendiente de calcular. Por favor, <strong>comparte tu ticket en WhatsApp</strong> para concluir con tu compra.</span>
                       : "Si ya completaste el pago, puedes compartirnos tu ticket en WhatsApp para un mejor seguimiento de pedido"}
                   </p>
                 </div>
-                <a 
-                  href={waCheckoutUrl} 
-                  target="_blank" 
+                <a
+                  href={waCheckoutUrl}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto px-6 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors flex-shrink-0 shadow-sm"
                 >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" /></svg>
                   Enviar Ticket
                 </a>
               </div>
