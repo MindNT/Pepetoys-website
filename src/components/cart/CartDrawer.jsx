@@ -8,7 +8,7 @@ import { saveOrder, verifyCustomerPhone, addCustomer, getCategories, createPayme
 const BASE_URL = import.meta.env.BASE_URL;
 
 // VARIABLE DE DESCUENTO GLOBAL (ej: 0.15 = 15%). Pon 0 para desactivar.
-const GLOBAL_DISCOUNT_RATE = 0;
+const GLOBAL_DISCOUNT_RATE = 0.0;
 
 // ARTÍCULOS QUE REQUIEREN COTIZACIÓN DE ENVÍO MANUAL
 const RESTRICTED_ITEMS = [123, 122, 124];
@@ -97,7 +97,7 @@ const CartDrawer = () => {
 
   let calculatedShipping = 230;
   if (hasExclusiveCategory) {
-    calculatedShipping = 0;
+    calculatedShipping = 2500;
   } else {
     if (itemsTotal <= 1000) {
       calculatedShipping = 230;
