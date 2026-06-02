@@ -4,6 +4,7 @@ import HomePage from './components/pages/HomePage';
 import CategoryPage from './components/pages/CategoryPage';
 import CartDrawer from './components/cart/CartDrawer';
 import Toast from './components/cart/Toast';
+import Ticket from './context/Ticket';
 import { useCart } from './context/CartContext';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/category/:id" element={<CategoryPage />} />
+        <Route path="/ticket" element={<Ticket />} />
       </Routes>
       
       {/* Cart Drawer - Global Component */}
