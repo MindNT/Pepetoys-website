@@ -1058,64 +1058,64 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
             </div>
 
             {mpCheckoutStep === 1 && (
-              <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-gray-50 flex flex-col items-center">
-                <div className="w-full max-w-2xl bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
-                  <h4 className="text-lg font-bold text-[#1A237E] mb-4 border-b pb-2">Detalle de tu compra</h4>
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 bg-gray-50 flex flex-col items-center">
+                <div className="w-full max-w-2xl bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-100 mb-6 flex-shrink-0">
+                  <h4 className="text-xl md:text-2xl font-extrabold text-[#1A237E] mb-4 border-b pb-3">Detalle de tu compra</h4>
 
-                  <div className="space-y-4 mb-6">
+                  <div className="space-y-3 mb-6">
                     {cartItems.map((item, idx) => (
-                      <div key={idx} className="flex justify-between text-sm text-gray-700">
-                        <span>{item.quantity}x {item.name}</span>
+                      <div key={idx} className="flex justify-between text-sm sm:text-base text-gray-700">
+                        <span><span className="font-bold">{item.quantity}x</span> {item.name}</span>
                         <span className="font-semibold">${(item.priceNumber || 0).toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
 
                   <div className="border-t pt-4 space-y-2">
-                    <div className="flex justify-between text-gray-600">
+                    <div className="flex justify-between text-sm sm:text-base text-gray-600">
                       <span>Subtotal Artículos:</span>
                       <span>${itemsTotal.toFixed(2)}</span>
                     </div>
 
                     {GLOBAL_DISCOUNT_RATE > 0 && (
-                      <div className="flex justify-between text-green-600">
+                      <div className="flex justify-between text-sm sm:text-base text-green-600 font-medium">
                         <span>Descuento ({(GLOBAL_DISCOUNT_RATE * 100).toFixed(0)}%):</span>
                         <span>-${discountAmount.toFixed(2)}</span>
                       </div>
                     )}
 
                     {deliveryOption === 'exterior' && (
-                      <div className="flex justify-between text-gray-600">
+                      <div className="flex justify-between text-sm sm:text-base text-gray-600">
                         <span>Costo de Envío:</span>
-                        <span>{isShippingPending ? 'Pendiente' : `$${shippingCost.toFixed(2)}`}</span>
+                        <span className="font-medium">{isShippingPending ? 'Pendiente' : `$${shippingCost.toFixed(2)}`}</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="border-t mt-4 pt-4 flex justify-between items-center">
-                    <span className="text-xl font-bold text-[#1A237E]">Total a Pagar:</span>
-                    <div className="text-right">
-                      <span className="text-2xl font-bold text-[#008F24]">${finalTotal.toFixed(2)} MXN</span>
-                      {isShippingPending && <div className="text-xs text-orange-600 mt-1">Envío pendiente de cotización</div>}
+                  <div className="border-t mt-5 pt-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <span className="text-xl sm:text-2xl font-black text-[#1A237E] uppercase tracking-tight">Total a Pagar:</span>
+                    <div className="text-left sm:text-right w-full sm:w-auto">
+                      <span className="text-3xl sm:text-4xl font-black text-[#008F24] tracking-tighter">${finalTotal.toFixed(2)} MXN</span>
+                      {isShippingPending && <div className="text-sm font-medium text-orange-600 mt-1">Envío pendiente de cotización</div>}
                     </div>
                   </div>
                 </div>
 
-                <div className="w-full max-w-2xl flex flex-col sm:flex-row gap-4 mt-auto">
+                <div className="w-full max-w-2xl flex flex-col sm:flex-row gap-3 sm:gap-4 mt-auto pt-4 sm:pt-0">
                   <button
                     onClick={() => {
                       setMpCheckoutUrl(null);
                       setMpCheckoutStep(0);
                       closeCart();
                     }}
-                    className="flex-1 py-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm"
+                    className="flex-1 py-3 sm:py-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm text-base sm:text-lg"
                   >
                     Regresar a tienda
                   </button>
                   
                   <button
                     onClick={() => setMpCheckoutStep(2)}
-                    className="flex-1 py-4 bg-[#009EE3] hover:bg-[#008dd2] text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                    className="flex-1 py-3 sm:py-4 bg-[#009EE3] hover:bg-[#008dd2] text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-base sm:text-lg"
                   >
                     Siguiente
                   </button>
@@ -1124,49 +1124,49 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
             )}
 
             {mpCheckoutStep === 2 && (
-              <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-gray-50 flex flex-col items-center justify-center">
-                <div className="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
-                  <h4 className="text-2xl font-bold text-[#1A237E] mb-6 text-center">Pasos para terminar tu compra</h4>
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 bg-gray-50 flex flex-col items-center justify-start sm:justify-center">
+                <div className="w-full max-w-2xl bg-white p-5 sm:p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center flex-shrink-0">
+                  <h4 className="text-xl sm:text-2xl font-black text-[#1A237E] mb-5 sm:mb-8 text-center leading-tight">Pasos para terminar tu compra</h4>
                   
-                  <div className="w-full space-y-6 mb-10">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-[#25D366]/20 text-[#25D366] font-bold text-xl flex items-center justify-center flex-shrink-0">1</div>
+                  <div className="w-full space-y-6 sm:space-y-8 mb-8 sm:mb-10">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-[#25D366]/20 text-[#25D366] font-black text-lg sm:text-2xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">1</div>
                       <div>
-                        <p className="text-lg font-semibold text-gray-800">Comparte tu ticket en WhatsApp</p>
-                        <p className="text-gray-600">Envía el mensaje pre-generado a nuestro equipo para validar tu orden y agilizar el envío.</p>
+                        <p className="text-base sm:text-xl font-bold text-gray-800 mb-1">Comparte tu ticket en WhatsApp</p>
+                        <p className="text-sm sm:text-base text-gray-600 leading-relaxed">Envía el mensaje pre-generado a nuestro equipo para validar tu orden y agilizar el envío.</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-[#009EE3]/20 text-[#009EE3] font-bold text-xl flex items-center justify-center flex-shrink-0">2</div>
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-[#009EE3]/20 text-[#009EE3] font-black text-lg sm:text-2xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">2</div>
                       <div>
-                        <p className="text-lg font-semibold text-gray-800">Continúa con el pago en Mercado Pago</p>
-                        <p className="text-gray-600">Una vez enviado el mensaje, haz clic en continuar para ingresar tus datos de forma segura.</p>
+                        <p className="text-base sm:text-xl font-bold text-gray-800 mb-1">Continúa con el pago en Mercado Pago</p>
+                        <p className="text-sm sm:text-base text-gray-600 leading-relaxed">Una vez enviado el mensaje, haz clic en continuar para ingresar tus datos de forma segura.</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="w-full flex flex-col gap-4 mt-auto">
+                  <div className="w-full flex flex-col gap-3 sm:gap-4 mt-auto">
                     <a
                       href={waCheckoutUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full py-4 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                      className="w-full py-3 sm:py-4 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-base sm:text-lg rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
                     >
-                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" /></svg>
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" /></svg>
                       Compartir Ticket en WhatsApp
                     </a>
                     
                     <button
                       onClick={() => setMpCheckoutStep(3)}
-                      className="w-full py-4 bg-[#009EE3] hover:bg-[#008dd2] text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
+                      className="w-full py-3 sm:py-4 bg-[#009EE3] hover:bg-[#008dd2] text-white font-bold text-base sm:text-lg rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
                     >
                       Continuar a pagar con Mercado Pago
                     </button>
 
                     <button
                       onClick={() => setMpCheckoutStep(1)}
-                      className="mt-2 text-gray-500 hover:text-gray-700 underline font-medium"
+                      className="mt-2 text-sm sm:text-base text-gray-500 hover:text-gray-800 underline font-semibold transition-colors"
                     >
                       Volver al resumen
                     </button>
