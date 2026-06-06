@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, Trash2, ShoppingBag, Loader2, MapPin, Store, Truck } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Plus, Minus, Trash2, ShoppingBag, Loader2, MapPin, Store, CreditCard, Download, AlertCircle, CheckCircle2, ChevronLeft, Lock } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import ConfirmDialog from './ConfirmDialog';
 import OrderSuccessModal from './OrderSuccessModal';
-import { saveOrder, verifyCustomerPhone, addCustomer, getCategories, createPaymentPreference } from '../../services/api';
+import { saveOrder, verifyCustomerPhone, addCustomer, getCategories, processCardPayment } from '../../services/api';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -38,10 +38,24 @@ const CartDrawer = () => {
   const [orderSuccessData, setOrderSuccessData] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [mpCheckoutUrl, setMpCheckoutUrl] = useState(null);
   const [waCheckoutUrl, setWaCheckoutUrl] = useState(null);
-  const [mpShippingPending, setMpShippingPending] = useState(false);
-  const [mpCheckoutStep, setMpCheckoutStep] = useState(0);
+
+  // Card payment flow
+  const [showCardFlow, setShowCardFlow] = useState(false); // true = mostrar flujo de tarjeta
+  const [cardFlowStep, setCardFlowStep] = useState('detail'); // 'detail' | 'form' | 'processing'
+  const [pendingOrderCode, setPendingOrderCode] = useState(null);
+  const [cardError, setCardError] = useState(null);
+  const [cardData, setCardData] = useState({
+    cardNumber: '',
+    expirationMonth: '',
+    expirationYear: '',
+    cvc: '',
+    cardholderName: '',
+    cardType: 'visa', // 'visa' | 'debvisa' | 'master' | 'debmaster'
+    payerEmail: '',
+    payerFirstName: '',
+    payerLastName: '',
+  });
 
   // Address form fields
   const [addressData, setAddressData] = useState({
@@ -124,8 +138,66 @@ const CartDrawer = () => {
     setShowPhoneDialog(true);
   };
 
-  // Función para enviar el pedido (extraída para reutilización)
-  const submitOrder = async (phoneDigits) => {
+  // Helper para construir el payload de pago con tarjeta
+  const buildCardPaymentPayload = (code) => {
+    const firstName = cardData.payerFirstName.trim();
+    const lastName = cardData.payerLastName.trim();
+    const fullName = cardData.cardholderName.trim() || `${firstName} ${lastName}`;
+    return {
+      transaction_amount: parseFloat(finalTotal.toFixed(2)),
+      card_number: cardData.cardNumber.replace(/\s/g, ''),
+      expiration_month: parseInt(cardData.expirationMonth, 10),
+      expiration_year: parseInt(cardData.expirationYear, 10),
+      cvc: cardData.cvc,
+      cardholder_name: fullName,
+      payment_method_id: cardData.cardType,
+      payer: {
+        email: cardData.payerEmail,
+        first_name: firstName,
+        last_name: lastName,
+      },
+      description: `Pago de Orden #${code} - KIKOI`,
+      installments: 1,
+      external_reference: `ORDEN-${code}`,
+      metadata: { origen: 'Web KIKOI' },
+    };
+  };
+
+  // Confirmar pago con tarjeta
+  const handleCardPaymentSubmit = async (e) => {
+    e.preventDefault();
+    setCardError(null);
+    setIsSubmitting(true);
+    setCardFlowStep('processing');
+
+    try {
+      const payload = buildCardPaymentPayload(pendingOrderCode);
+      console.log('Payload de pago:', JSON.stringify(payload, null, 2));
+      const payResponse = await processCardPayment(payload);
+
+      console.log('Respuesta de pago:', payResponse);
+
+      if (payResponse?.status === 'approved') {
+        // Guardar la orden en el backend KIKOI
+        const phoneDigits = phone.replace(/\D/g, '');
+        await submitOrder(phoneDigits, pendingOrderCode, true);
+      } else {
+        // Pago rechazado o error
+        const detail = payResponse?.status_detail || 'Error desconocido';
+        setCardError(`Pago rechazado: ${detail}. Por favor verifica tus datos e intenta de nuevo.`);
+        setCardFlowStep('form');
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      console.error('Error en pago con tarjeta:', err);
+      setCardError('Ocurrió un error al procesar el pago. Por favor intenta de nuevo.');
+      setCardFlowStep('form');
+      setIsSubmitting(false);
+    }
+  };
+
+  // Función para enviar el pedido al backend KIKOI
+  const submitOrder = async (phoneDigits, codeOverride = null, fromCardPayment = false) => {
     try {
       // Formatear items: {id: quantity}
       const items = {};
@@ -133,7 +205,6 @@ const CartDrawer = () => {
         items[String(item.id)] = item.quantity;
       });
 
-      // Preparar datos del pedido usando el finalTotal ya calculado
       const totalAmount = parseFloat(finalTotal.toFixed(2));
 
       // Construir string de dirección si no es pickup
@@ -142,99 +213,59 @@ const CartDrawer = () => {
         addressString = `Envio Exterior - Nombre: ${addressData.recipientName}, Calle: ${addressData.street}, Número: ${addressData.number}, Entre calle: ${addressData.crossStreet}, Colonia: ${addressData.neighborhood}, Color fachada: ${addressData.facadeColor}, Código postal: ${addressData.postalCode}, Teléfono: ${addressData.deliveryPhone}`;
       }
 
-      const generatedCode = `ORD-${Date.now()}`;
-      const generatedCustomerName = customerName || "Cliente";
+      const generatedCode = codeOverride || `ORD-${Date.now()}`;
+      const generatedCustomerName = customerName || 'Cliente';
 
       // Construir mensaje de WhatsApp
-      let itemsText = cartItems.map(item => `- ${item.quantity}x ${item.name} ($${(item.priceNumber || 0).toFixed(2)} c/u)`).join('\n');
-
-      let deliveryText = deliveryOption === 'pickup'
+      const itemsText = cartItems.map(item => `- ${item.quantity}x ${item.name} ($${(item.priceNumber || 0).toFixed(2)} c/u)`).join('\n');
+      const deliveryText = deliveryOption === 'pickup'
         ? 'PickUp en Tienda'
         : `Envío Exterior\nDirección:\n${addressString ? addressString.replace('Envio Exterior - ', '') : ''}`;
 
-      const waMessage = `¡Hola! Acabo de realizar un pedido.
-      
-*Código de Pedido:* ${generatedCode}
-*Cliente:* ${generatedCustomerName}
-*Teléfono:* ${phoneDigits}
-*Entrega:* ${deliveryText}
-*Método de Pago:* ${paymentMethod}
-
-*Resumen del Pedido:*
-${itemsText}
-${GLOBAL_DISCOUNT_RATE > 0 ? `\n*Subtotal Artículos:* $${itemsTotal.toFixed(2)}\n*Descuento (${(GLOBAL_DISCOUNT_RATE * 100).toFixed(0)}%):* -$${discountAmount.toFixed(2)}` : ''}
-${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'Pendiente' : `$${shippingCost.toFixed(2)}`}` : ''}
-
-*Total a Pagar:* $${finalTotal.toFixed(2)} MXN ${isShippingPending ? '(Envío pendiente de cotización)' : ''}`;
+      const waMessage = `¡Hola! Acabo de realizar un pedido.\n\n*Código de Pedido:* ${generatedCode}\n*Cliente:* ${generatedCustomerName}\n*Teléfono:* ${phoneDigits}\n*Entrega:* ${deliveryText}\n*Método de Pago:* ${paymentMethod}\n\n*Resumen del Pedido:*\n${itemsText}${GLOBAL_DISCOUNT_RATE > 0 ? `\n\n*Subtotal Artículos:* $${itemsTotal.toFixed(2)}\n*Descuento (${(GLOBAL_DISCOUNT_RATE * 100).toFixed(0)}%):* -$${discountAmount.toFixed(2)}` : ''}${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'Pendiente' : `$${shippingCost.toFixed(2)}`}` : ''}\n\n*Total a Pagar:* $${finalTotal.toFixed(2)} MXN${isShippingPending ? ' (Envío pendiente de cotización)' : ''}`;
 
       const orderData = {
         phone: phoneDigits,
-        items: items,
+        items,
         total_amount: totalAmount,
         promotions: {},
         maps_url: waMessage,
-        payment_method: paymentMethod
+        payment_method: paymentMethod,
       };
 
       console.log('Enviando pedido:', JSON.stringify(orderData, null, 2));
-
-      // Enviar pedido al backend
       const response = await saveOrder(orderData);
 
       if (response) {
         const waUrl = `https://wa.me/525578343150?text=${encodeURIComponent(waMessage)}`;
 
-        // Ocultar modales de checkout, pero mantener datos ingresados para el resumen
+        // Cerrar todos los diálogos
         setShowPhoneDialog(false);
         setShowNameDialog(false);
         setShowDeliveryDialog(false);
+        setShowCardFlow(false);
         closeCart();
+        clearCart();
 
-        // Guardar URL de WhatsApp en estado para uso opcional
         setWaCheckoutUrl(waUrl);
-        setMpShippingPending(isShippingPending);
 
-        // Abrir MercadoPago solo en estos casos:
-        // - Envío Exterior (con o sin envío pendiente)
-        // - Pickup con método de pago "Tarjeta"
-        const shouldOpenMP = deliveryOption === 'exterior' ||
-          (deliveryOption === 'pickup' && paymentMethod === 'Tarjeta');
-
-        if (shouldOpenMP) {
-          try {
-            const paymentResponse = await createPaymentPreference(totalAmount);
-            const checkoutUrl = paymentResponse?.data?.init_point || paymentResponse?.data?.sandbox_init_point;
-            if (checkoutUrl) {
-              setMpCheckoutUrl(checkoutUrl);
-              setMpCheckoutStep(1);
-            }
-          } catch (paymentError) {
-            console.error('Error al crear preferencia de pago:', paymentError);
-            // No bloquear el flujo
-          }
-        } else {
-          // Mostrar success modal para órdenes que no van a Mercado Pago
-          setOrderSuccessData({
-            orderCode: generatedCode,
-            customerName: generatedCustomerName,
-            phone: phoneDigits,
-            items: cartItems,
-            totalAmount: finalTotal,
-            waUrl: waUrl
-          });
-          setShowSuccessModal(true);
-        }
+        // Mostrar success modal siempre
+        setOrderSuccessData({
+          orderCode: generatedCode,
+          customerName: generatedCustomerName,
+          phone: phoneDigits,
+          items: cartItems,
+          totalAmount: finalTotal,
+          waUrl: waUrl,
+          paidByCard: fromCardPayment,
+        });
+        setShowSuccessModal(true);
       } else {
         throw new Error('No se recibió respuesta del servidor');
       }
     } catch (error) {
       console.error('Error al procesar el pedido:', error);
-      let errorMessage = 'Error al procesar el pedido. Por favor intenta de nuevo.';
-
-      if (error.message) {
-        errorMessage = error.message;
-      }
-
+      const errorMessage = error.message || 'Error al procesar el pedido. Por favor intenta de nuevo.';
       alert(errorMessage);
       throw error;
     }
@@ -355,19 +386,15 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
 
   // Validar y confirmar opción de entrega
   const handleDeliveryConfirm = async () => {
-    // Validar que se haya seleccionado una opción de entrega
     if (!deliveryOption) {
       alert('Por favor selecciona un método de entrega');
       return;
     }
-
-    // Validar método de pago
     if (!paymentMethod) {
       alert('Por favor selecciona un método de pago');
       return;
     }
 
-    // Validar campos de dirección para Exterior
     if (deliveryOption === 'exterior') {
       const requiredFields = [
         { field: 'recipientName', label: 'Nombre de quien recibe' },
@@ -377,9 +404,8 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
         { field: 'neighborhood', label: 'Colonia' },
         { field: 'facadeColor', label: 'Color fachada' },
         { field: 'postalCode', label: 'Código postal' },
-        { field: 'deliveryPhone', label: 'Teléfono' }
+        { field: 'deliveryPhone', label: 'Teléfono' },
       ];
-
       for (const { field, label } of requiredFields) {
         if (!addressData[field] || addressData[field].trim() === '') {
           alert(`Por favor completa el campo: ${label}`);
@@ -388,10 +414,21 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
       }
     }
 
-    setIsSubmitting(true);
+    // Si el método es Tarjeta → abrir flujo de pago con tarjeta
+    const isCardPayment = paymentMethod === 'Tarjeta';
+    if (isCardPayment) {
+      const newCode = `ORD-${Date.now()}`;
+      setPendingOrderCode(newCode);
+      setCardFlowStep('detail');
+      setCardError(null);
+      setShowDeliveryDialog(false);
+      setShowCardFlow(true);
+      return;
+    }
 
+    // Para otros métodos (Efectivo, Transferencia) → guardar orden directamente
+    setIsSubmitting(true);
     try {
-      // Guardar el pedido en el backend y abrir WhatsApp
       const phoneDigits = phone.replace(/\D/g, '');
       await submitOrder(phoneDigits);
       setIsSubmitting(false);
@@ -399,6 +436,27 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
       console.error('Error al procesar el pedido:', error);
       setIsSubmitting(false);
     }
+  };
+
+  const handleCardFormChange = (field, value) => {
+    setCardData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCloseCardFlow = () => {
+    setShowCardFlow(false);
+    setCardFlowStep('detail');
+    setCardError(null);
+    setCardData({
+      cardNumber: '',
+      expirationMonth: '',
+      expirationYear: '',
+      cvc: '',
+      cardholderName: '',
+      cardType: 'visa',
+      payerEmail: '',
+      payerFirstName: '',
+      payerLastName: '',
+    });
   };
 
   const handlePhoneCancel = () => {
@@ -1032,161 +1090,321 @@ ${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'P
         </div>
       )}
 
-      {/* Mercado Pago Checkout Modal */}
-      {mpCheckoutUrl && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 md:p-8">
-          <div className="bg-white rounded-2xl shadow-2xl w-full h-[90vh] md:h-[95vh] max-w-5xl flex flex-col overflow-hidden relative animate-in fade-in zoom-in duration-300">
-            <div className="flex justify-between items-center p-4 border-b bg-white">
+      {/* ====== CARD PAYMENT FLOW MODAL ====== */}
+      {showCardFlow && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-3 sm:p-6">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden max-h-[95vh] animate-in fade-in zoom-in duration-300">
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-[#1A237E] to-[#283593]">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-[#009EE3]" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14.072 2.37A2.88 2.88 0 0 0 12 1.5a2.88 2.88 0 0 0-2.072.87L1.24 11.057a2.88 2.88 0 0 0 0 4.071l8.688 8.686A2.88 2.88 0 0 0 12 24.686a2.88 2.88 0 0 0 2.072-.871l8.688-8.687a2.88 2.88 0 0 0 0-4.07L14.072 2.37ZM12 12.345l-4.524 4.524-1.92-1.92L10.08 10.426l-1.92-1.92 1.92-1.92 4.524 4.524 4.524-4.524 1.92 1.92-1.92 1.92 1.92 1.92-1.92 1.92L12 12.345Z" /></svg>
-                </div>
-                <h3 className="text-xl font-bold text-[#1A237E]">
-                  {mpCheckoutStep === 1 ? "Resumen de tu Pedido" : mpCheckoutStep === 2 ? "Instrucciones de Pago" : "Pago Seguro"}
+                {cardFlowStep === 'form' && (
+                  <button
+                    onClick={() => { setCardFlowStep('detail'); setCardError(null); }}
+                    className="w-8 h-8 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                )}
+                <CreditCard size={22} className="text-white" />
+                <h3 className="text-lg font-bold text-white">
+                  {cardFlowStep === 'detail' && 'Detalle de Compra'}
+                  {cardFlowStep === 'form' && 'Datos de Tarjeta'}
+                  {cardFlowStep === 'processing' && 'Procesando Pago...'}
                 </h3>
               </div>
-              <button
-                onClick={() => {
-                  setMpCheckoutUrl(null);
-                  setMpCheckoutStep(0);
-                }}
-                className="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 rounded-full transition-colors"
-                aria-label="Cerrar pago"
-              >
-                <X size={24} strokeWidth={2.5} />
-              </button>
+              {cardFlowStep !== 'processing' && (
+                <button
+                  onClick={handleCloseCardFlow}
+                  className="w-9 h-9 flex items-center justify-center bg-white/10 hover:bg-white/25 text-white rounded-full transition-colors"
+                  aria-label="Cerrar"
+                >
+                  <X size={20} strokeWidth={2.5} />
+                </button>
+              )}
             </div>
 
-            {mpCheckoutStep === 1 && (
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 bg-gray-50 flex flex-col items-center">
-                <div className="w-full max-w-2xl bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-100 mb-6 flex-shrink-0">
-                  <h4 className="text-xl md:text-2xl font-extrabold text-[#1A237E] mb-4 border-b pb-3">Detalle de tu compra</h4>
+            {/* STEP 1: Order Detail */}
+            {cardFlowStep === 'detail' && (
+              <div className="flex-1 overflow-y-auto p-5 sm:p-7 bg-gray-50">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6 mb-5">
+                  <h4 className="text-lg font-bold text-[#1A237E] mb-4 pb-3 border-b border-gray-100">Resumen de tu Pedido</h4>
 
-                  <div className="space-y-3 mb-6">
+                  <div className="space-y-3 mb-5">
                     {cartItems.map((item, idx) => (
-                      <div key={idx} className="flex justify-between text-sm sm:text-base text-gray-700">
-                        <span><span className="font-bold">{item.quantity}x</span> {item.name}</span>
-                        <span className="font-semibold">${(item.priceNumber || 0).toFixed(2)}</span>
+                      <div key={idx} className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="inline-flex items-center justify-center w-6 h-6 bg-[#1A237E]/10 text-[#1A237E] rounded-full text-xs font-bold flex-shrink-0">{item.quantity}</span>
+                          <span className="text-sm text-gray-700 truncate">{item.name}</span>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-800 flex-shrink-0">${((item.priceNumber || 0) * item.quantity).toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
 
-                  <div className="border-t pt-4 space-y-2">
-                    <div className="flex justify-between text-sm sm:text-base text-gray-600">
-                      <span>Subtotal Artículos:</span>
+                  <div className="border-t border-gray-100 pt-4 space-y-2">
+                    <div className="flex justify-between text-sm text-gray-500">
+                      <span>Subtotal artículos:</span>
                       <span>${itemsTotal.toFixed(2)}</span>
                     </div>
-
                     {GLOBAL_DISCOUNT_RATE > 0 && (
-                      <div className="flex justify-between text-sm sm:text-base text-green-600 font-medium">
+                      <div className="flex justify-between text-sm text-green-600 font-medium">
                         <span>Descuento ({(GLOBAL_DISCOUNT_RATE * 100).toFixed(0)}%):</span>
                         <span>-${discountAmount.toFixed(2)}</span>
                       </div>
                     )}
-
                     {deliveryOption === 'exterior' && (
-                      <div className="flex justify-between text-sm sm:text-base text-gray-600">
-                        <span>Costo de Envío:</span>
-                        <span className="font-medium">{isShippingPending ? 'Pendiente' : `$${shippingCost.toFixed(2)}`}</span>
+                      <div className="flex justify-between text-sm text-gray-500">
+                        <span>Envío:</span>
+                        <span>{isShippingPending ? 'Pendiente' : `$${shippingCost.toFixed(2)}`}</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="border-t mt-5 pt-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                    <span className="text-xl sm:text-2xl font-black text-[#1A237E] uppercase tracking-tight">Total a Pagar:</span>
-                    <div className="text-left sm:text-right w-full sm:w-auto">
-                      <span className="text-3xl sm:text-4xl font-black text-[#008F24] tracking-tighter">${finalTotal.toFixed(2)} MXN</span>
-                      {isShippingPending && <div className="text-sm font-medium text-orange-600 mt-1">Envío pendiente de cotización</div>}
+                  <div className="mt-4 pt-4 border-t-2 border-gray-200 flex justify-between items-center">
+                    <span className="text-xl font-black text-[#1A237E]">Total a Pagar</span>
+                    <div className="text-right">
+                      <span className="text-3xl font-black text-[#008F24]">${finalTotal.toFixed(2)}</span>
+                      <span className="text-base font-semibold text-gray-500 ml-1">MXN</span>
+                      {isShippingPending && <div className="text-xs text-orange-600 mt-0.5">Envío pendiente de cotización</div>}
                     </div>
                   </div>
                 </div>
 
-                <div className="w-full max-w-2xl flex flex-col sm:flex-row gap-3 sm:gap-4 mt-auto pt-4 sm:pt-0">
+                <div className="flex gap-3">
                   <button
-                    onClick={() => {
-                      setMpCheckoutUrl(null);
-                      setMpCheckoutStep(0);
-                      closeCart();
-                    }}
-                    className="flex-1 py-3 sm:py-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm text-base sm:text-lg"
+                    onClick={handleCloseCardFlow}
+                    className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all flex items-center justify-center gap-2"
                   >
-                    Regresar a tienda
+                    <ChevronLeft size={18} />
+                    Regresar
                   </button>
-                  
                   <button
-                    onClick={() => setMpCheckoutStep(2)}
-                    className="flex-1 py-3 sm:py-4 bg-[#009EE3] hover:bg-[#008dd2] text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-base sm:text-lg"
+                    onClick={() => setCardFlowStep('form')}
+                    className="flex-1 py-3.5 bg-[#1A237E] hover:bg-[#151c6a] text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                   >
-                    Siguiente
+                    <CreditCard size={18} />
+                    Confirmar y Pagar
                   </button>
                 </div>
               </div>
             )}
 
-            {mpCheckoutStep === 2 && (
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 bg-gray-50 flex flex-col items-center justify-start sm:justify-center">
-                <div className="w-full max-w-2xl bg-white p-5 sm:p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center flex-shrink-0">
-                  <h4 className="text-xl sm:text-2xl font-black text-[#1A237E] mb-5 sm:mb-8 text-center leading-tight">Pasos para terminar tu compra</h4>
-                  
-                  <div className="w-full space-y-6 sm:space-y-8 mb-8 sm:mb-10">
-                    <div className="flex items-start gap-3 sm:gap-4">
-                      <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-[#25D366]/20 text-[#25D366] font-black text-lg sm:text-2xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">1</div>
-                      <div>
-                        <p className="text-base sm:text-xl font-bold text-gray-800 mb-1">Comparte tu ticket en WhatsApp</p>
-                        <p className="text-sm sm:text-base text-gray-600 leading-relaxed">Envía el mensaje pre-generado a nuestro equipo para validar tu orden y agilizar el envío.</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start gap-3 sm:gap-4">
-                      <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-[#009EE3]/20 text-[#009EE3] font-black text-lg sm:text-2xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">2</div>
-                      <div>
-                        <p className="text-base sm:text-xl font-bold text-gray-800 mb-1">Continúa con el pago en Mercado Pago</p>
-                        <p className="text-sm sm:text-base text-gray-600 leading-relaxed">Una vez enviado el mensaje, haz clic en continuar para ingresar tus datos de forma segura.</p>
-                      </div>
+            {/* STEP 2: Card Form */}
+            {cardFlowStep === 'form' && (
+              <form onSubmit={handleCardPaymentSubmit} className="flex-1 overflow-y-auto p-5 sm:p-7 bg-gray-50">
+                {/* Error Alert */}
+                {cardError && (
+                  <div className="mb-5 flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4">
+                    <AlertCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-700">{cardError}</p>
+                  </div>
+                )}
+
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6 mb-5 space-y-4">
+                  <h4 className="text-base font-bold text-[#1A237E] pb-2 border-b border-gray-100 flex items-center gap-2">
+                    <Lock size={16} className="text-[#008F24]" />
+                    Datos de Tarjeta
+                  </h4>
+
+                  {/* Tipo de tarjeta */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Tipo de Tarjeta</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'visa', label: 'Visa Crédito' },
+                        { id: 'debvisa', label: 'Visa Débito' },
+                        { id: 'master', label: 'Mastercard Crédito' },
+                        { id: 'debmaster', label: 'Mastercard Débito' },
+                      ].map(({ id, label }) => (
+                        <label
+                          key={id}
+                          className={`flex items-center gap-2 p-2.5 border-2 rounded-lg cursor-pointer transition-all text-sm font-medium ${
+                            cardData.cardType === id
+                              ? 'border-[#1A237E] bg-[#1A237E]/5 text-[#1A237E]'
+                              : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="cardType"
+                            value={id}
+                            checked={cardData.cardType === id}
+                            onChange={() => handleCardFormChange('cardType', id)}
+                            className="hidden"
+                          />
+                          <span className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${
+                            cardData.cardType === id ? 'border-[#1A237E] bg-[#1A237E]' : 'border-gray-300'
+                          }`} />
+                          {label}
+                        </label>
+                      ))}
                     </div>
                   </div>
 
-                  <div className="w-full flex flex-col gap-3 sm:gap-4 mt-auto">
-                    <a
-                      href={waCheckoutUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-3 sm:py-4 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-base sm:text-lg rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
-                    >
-                      <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" /></svg>
-                      Compartir Ticket en WhatsApp
-                    </a>
-                    
-                    <button
-                      onClick={() => setMpCheckoutStep(3)}
-                      className="w-full py-3 sm:py-4 bg-[#009EE3] hover:bg-[#008dd2] text-white font-bold text-base sm:text-lg rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
-                    >
-                      Continuar a pagar con Mercado Pago
-                    </button>
-
-                    <button
-                      onClick={() => setMpCheckoutStep(1)}
-                      className="mt-2 text-sm sm:text-base text-gray-500 hover:text-gray-800 underline font-semibold transition-colors"
-                    >
-                      Volver al resumen
-                    </button>
+                  {/* Número de tarjeta */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Número de Tarjeta *</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={19}
+                      value={cardData.cardNumber}
+                      onChange={e => {
+                        const raw = e.target.value.replace(/\D/g, '').slice(0, 16);
+                        const formatted = raw.match(/.{1,4}/g)?.join(' ') || raw;
+                        handleCardFormChange('cardNumber', formatted);
+                      }}
+                      placeholder="0000 0000 0000 0000"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base tracking-widest font-mono"
+                      required
+                    />
                   </div>
+
+                  {/* Nombre en tarjeta */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nombre del Titular *</label>
+                    <input
+                      type="text"
+                      value={cardData.cardholderName}
+                      onChange={e => handleCardFormChange('cardholderName', e.target.value.toUpperCase())}
+                      placeholder="NOMBRE COMO APARECE EN LA TARJETA"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base uppercase"
+                      required
+                    />
+                  </div>
+
+                  {/* Vencimiento + CVC */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Mes *</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={2}
+                        value={cardData.expirationMonth}
+                        onChange={e => handleCardFormChange('expirationMonth', e.target.value.replace(/\D/g, '').slice(0, 2))}
+                        placeholder="MM"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base text-center"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Año *</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={cardData.expirationYear}
+                        onChange={e => handleCardFormChange('expirationYear', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        placeholder="AAAA"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base text-center"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">CVC *</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={cardData.cvc}
+                        onChange={e => handleCardFormChange('cvc', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        placeholder="***"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base text-center"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Datos del Titular (Pagador) */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6 mb-5 space-y-4">
+                  <h4 className="text-base font-bold text-[#1A237E] pb-2 border-b border-gray-100">Datos del Pagador</h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nombre *</label>
+                      <input
+                        type="text"
+                        value={cardData.payerFirstName}
+                        onChange={e => handleCardFormChange('payerFirstName', e.target.value)}
+                        placeholder="Juan"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Apellido *</label>
+                      <input
+                        type="text"
+                        value={cardData.payerLastName}
+                        onChange={e => handleCardFormChange('payerLastName', e.target.value)}
+                        placeholder="Pérez"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Correo Electrónico *</label>
+                    <input
+                      type="email"
+                      value={cardData.payerEmail}
+                      onChange={e => handleCardFormChange('payerEmail', e.target.value)}
+                      placeholder="correo@ejemplo.com"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Total reminder */}
+                <div className="bg-[#1A237E]/5 border border-[#1A237E]/20 rounded-xl px-5 py-4 mb-5 flex justify-between items-center">
+                  <span className="text-sm font-semibold text-[#1A237E]">Total a cobrar:</span>
+                  <span className="text-2xl font-black text-[#008F24]">${finalTotal.toFixed(2)} <span className="text-sm font-semibold text-gray-500">MXN</span></span>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setCardFlowStep('detail'); setCardError(null); }}
+                    className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <ChevronLeft size={18} />
+                    Regresar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-3.5 bg-[#008F24] hover:bg-[#007520] text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <Lock size={18} />
+                    Pagar Ahora
+                  </button>
+                </div>
+
+                <p className="text-xs text-gray-400 text-center mt-4 flex items-center justify-center gap-1">
+                  <Lock size={11} /> Tus datos están protegidos con cifrado seguro
+                </p>
+              </form>
+            )}
+
+            {/* STEP 3: Processing */}
+            {cardFlowStep === 'processing' && (
+              <div className="flex-1 flex flex-col items-center justify-center p-10 gap-6 bg-gray-50">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full bg-[#1A237E]/10 flex items-center justify-center">
+                    <Loader2 size={40} className="text-[#1A237E] animate-spin" />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <h4 className="text-xl font-bold text-[#1A237E] mb-2">Procesando tu pago...</h4>
+                  <p className="text-gray-500 text-sm">Por favor no cierres esta ventana</p>
                 </div>
               </div>
             )}
 
-            {mpCheckoutStep === 3 && (
-              <>
-                <div className="flex-1 w-full bg-gray-50 relative">
-                  <iframe
-                    src={mpCheckoutUrl}
-                    className="absolute inset-0 w-full h-full border-none"
-                    title="Mercado Pago Checkout"
-                    allow="payment"
-                  />
-                </div>
-              </>
-            )}
           </div>
         </div>
       )}
