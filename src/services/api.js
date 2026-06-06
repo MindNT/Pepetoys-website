@@ -1,6 +1,6 @@
 
 export const API_BASE_URL = 'https://pepetoys-backend.mindnt.com.mx';
-export const PAYMENT_API_BASE_URL = 'http://128.199.0.156:9456';
+export const PAYMENT_API_BASE_URL = 'https://pepetoys-backend.mindnt.com.mx/pay';
 
 /**
  * Returns the current date in YYYY-MM-DD format.
