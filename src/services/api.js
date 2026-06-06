@@ -1,5 +1,6 @@
 
 export const API_BASE_URL = 'https://pepetoys-backend.mindnt.com.mx';
+export const PAYMENT_API_BASE_URL = 'http://128.199.0.156:9456';
 
 /**
  * Returns the current date in YYYY-MM-DD format.
@@ -251,26 +252,25 @@ export const addCustomer = async (name, phone) => {
 };
 
 /**
- * Creates a MercadoPago payment preference.
- * Endpoint: /payments/create-preference?amount=<amount>
- * @param {number} amount - Total amount to charge
- * @returns {Promise<Object>} - Response with data.init_point URL (producción)
+ * Processes a card payment directly through the payment endpoint.
+ * Endpoint: POST /pay
+ * @param {Object} paymentData - Full payment payload
+ * @returns {Promise<Object>} - Response with status and status_detail
  */
-export const createPaymentPreference = async (amount) => {
+export const processCardPayment = async (paymentData) => {
     try {
-        const response = await fetch(
-            `${API_BASE_URL}/payments/create-preference?amount=${amount}`,
-            { method: 'POST' }
-        );
-
-        if (!response.ok) {
-            throw new Error(`Payment API error: ${response.status} ${response.statusText}`);
-        }
+        const response = await fetch(`${PAYMENT_API_BASE_URL}/pay`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(paymentData),
+        });
 
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error('Failed to create payment preference:', error);
+        console.error('Failed to process card payment:', error);
         throw error;
     }
 };
