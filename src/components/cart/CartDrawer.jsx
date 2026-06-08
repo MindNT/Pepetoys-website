@@ -414,8 +414,8 @@ const CartDrawer = () => {
       }
     }
 
-    // Si el método es Tarjeta → abrir flujo de pago con tarjeta
-    const isCardPayment = paymentMethod === 'Tarjeta';
+    // Si el método es Tarjeta o Mercado Pago → abrir flujo de pago con tarjeta
+    const isCardPayment = paymentMethod === 'Tarjeta' || paymentMethod === 'Mercado Pago';
     if (isCardPayment) {
       const newCode = `ORD-${Date.now()}`;
       setPendingOrderCode(newCode);
@@ -864,7 +864,7 @@ const CartDrawer = () => {
               <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 flex items-center gap-3">
                 <div className="text-blue-700">
                   <p className="font-semibold text-sm">Método de pago para envíos:</p>
-                  <p className="text-sm">El pago se realizará únicamente a través de Mercado Pago. Al confirmar, se abrirá WhatsApp con los detalles de tu pedido para recibir el link de pago.</p>
+                  <p className="text-sm">El pago se realizará de forma segura mediante tarjeta (procesado por Mercado Pago).</p>
                 </div>
               </div>
             )}
