@@ -4,7 +4,7 @@ import { CheckCircle, X, ShoppingBag, Package, CreditCard, Sparkles } from 'luci
 const OrderSuccessModal = ({ isOpen, onClose, orderData }) => {
     if (!isOpen) return null;
 
-    const { orderCode, phone, items, totalAmount, customerName, waUrl, paidByCard } = orderData || {};
+    const { orderCode, phone, items, totalAmount, customerName, waUrl, paidByCard, discountAmount, discountPercentage } = orderData || {};
 
     return (
         <div className="fixed inset-0 z-[80] flex items-center justify-center px-4">
@@ -107,6 +107,16 @@ const OrderSuccessModal = ({ isOpen, onClose, orderData }) => {
                                         </div>
                                     ))}
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Descuento */}
+                        {discountAmount > 0 && (
+                            <div className="flex justify-between items-center mb-3 text-sm">
+                                <p className="font-bold text-green-600">Descuento ({(discountPercentage * 100).toFixed(0)}%)</p>
+                                <p className="font-black text-green-600">
+                                    -${discountAmount.toFixed(2)}
+                                </p>
                             </div>
                         )}
 
