@@ -3,7 +3,7 @@ import { X, Plus, Minus, Trash2, ShoppingBag, Loader2, MapPin, Store, CreditCard
 import { useCart } from '../../context/CartContext';
 import ConfirmDialog from './ConfirmDialog';
 import OrderSuccessModal from './OrderSuccessModal';
-import { saveOrder, verifyCustomerPhone, addCustomer, getCategories, processCardPayment } from '../../services/api';
+import { saveOrder, verifyCustomerPhone, addCustomer, getCategories, processCardPayment, validateDiscountCode } from '../../services/api';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -71,6 +71,32 @@ const CartDrawer = () => {
 
   const [voladerasIds, setVoladerasIds] = useState([EXCLUSIVE_CATEGORY]);
 
+  const [discountCode, setDiscountCode] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
+  const [discountError, setDiscountError] = useState('');
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+
+  const handleApplyDiscount = async () => {
+    if (!discountCode.trim()) return;
+    setIsApplyingDiscount(true);
+    setDiscountError('');
+    try {
+      const response = await validateDiscountCode(discountCode.trim());
+      if (response && response.is_valid) {
+        setAppliedDiscount({ code: discountCode.trim().toUpperCase(), percentage: response.discount_percentage });
+        setDiscountCode('');
+      } else {
+        setDiscountError(response?.message || 'Código inválido');
+        setAppliedDiscount(null);
+      }
+    } catch (error) {
+      console.error('Error validating discount:', error);
+      setDiscountError('Error al validar el código');
+    } finally {
+      setIsApplyingDiscount(false);
+    }
+  };
+
   useEffect(() => {
     const fetchVoladerasCategories = async () => {
       try {
@@ -98,7 +124,8 @@ const CartDrawer = () => {
 
   // --- Cálculos de Totales ---
   const itemsTotal = getTotalPrice(); // Total antes de promociones
-  const discountAmount = itemsTotal * GLOBAL_DISCOUNT_RATE;
+  const currentDiscountRate = appliedDiscount ? appliedDiscount.percentage : GLOBAL_DISCOUNT_RATE;
+  const discountAmount = itemsTotal * currentDiscountRate;
   const netItemsTotal = itemsTotal - discountAmount;
 
   const hasRestrictedItem = cartItems.some(item => RESTRICTED_ITEMS.includes(Number(item.id)));
@@ -222,7 +249,10 @@ const CartDrawer = () => {
         ? 'PickUp en Tienda'
         : `Envío Exterior\nDirección:\n${addressString ? addressString.replace('Envio Exterior - ', '') : ''}`;
 
-      const waMessage = `¡Hola! Acabo de realizar un pedido.\n\n*Código de Pedido:* ${generatedCode}\n*Cliente:* ${generatedCustomerName}\n*Teléfono:* ${phoneDigits}\n*Entrega:* ${deliveryText}\n*Método de Pago:* ${paymentMethod}\n\n*Resumen del Pedido:*\n${itemsText}${GLOBAL_DISCOUNT_RATE > 0 ? `\n\n*Subtotal Artículos:* $${itemsTotal.toFixed(2)}\n*Descuento (${(GLOBAL_DISCOUNT_RATE * 100).toFixed(0)}%):* -$${discountAmount.toFixed(2)}` : ''}${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'Pendiente' : `$${shippingCost.toFixed(2)}`}` : ''}\n\n*Total a Pagar:* $${finalTotal.toFixed(2)} MXN${isShippingPending ? ' (Envío pendiente de cotización)' : ''}`;
+      const waCurrentDiscountRate = appliedDiscount ? appliedDiscount.percentage : GLOBAL_DISCOUNT_RATE;
+      const discountText = appliedDiscount ? ` (Código: ${appliedDiscount.code})` : '';
+
+      const waMessage = `¡Hola! Acabo de realizar un pedido.\n\n*Código de Pedido:* ${generatedCode}\n*Cliente:* ${generatedCustomerName}\n*Teléfono:* ${phoneDigits}\n*Entrega:* ${deliveryText}\n*Método de Pago:* ${paymentMethod}\n\n*Resumen del Pedido:*\n${itemsText}${waCurrentDiscountRate > 0 ? `\n\n*Subtotal Artículos:* $${itemsTotal.toFixed(2)}\n*Descuento (${(waCurrentDiscountRate * 100).toFixed(0)}%)${discountText}:* -$${discountAmount.toFixed(2)}` : ''}${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'Pendiente' : `$${shippingCost.toFixed(2)}`}` : ''}\n\n*Total a Pagar:* $${finalTotal.toFixed(2)} MXN${isShippingPending ? ' (Envío pendiente de cotización)' : ''}`;
 
       const orderData = {
         phone: phoneDigits,
@@ -628,6 +658,34 @@ const CartDrawer = () => {
         {/* Footer - Total y Checkout */}
         {cartItems.length > 0 && (
           <div className="border-t border-gray-200 px-4 md:px-6 py-5 md:py-5 bg-gray-50">
+            {/* Discount Code Input */}
+            <div className="mb-4">
+              <label className="text-sm text-gray-600 mb-1 block">¿Tienes un código de descuento?</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={discountCode} 
+                  onChange={(e) => setDiscountCode(e.target.value)}
+                  placeholder="Ej: DESC20A1"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#008F24] uppercase"
+                />
+                <button 
+                  onClick={handleApplyDiscount}
+                  disabled={isApplyingDiscount || !discountCode.trim()}
+                  className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors disabled:opacity-50"
+                >
+                  {isApplyingDiscount ? 'Validando...' : 'Aplicar'}
+                </button>
+              </div>
+              {discountError && <p className="text-red-500 text-xs mt-1">{discountError}</p>}
+              {appliedDiscount && (
+                <div className="flex items-center justify-between mt-1 text-green-600 text-sm">
+                  <span>Código '{appliedDiscount.code}' aplicado ({(appliedDiscount.percentage * 100).toFixed(0)}%)</span>
+                  <button onClick={() => setAppliedDiscount(null)} className="text-xs underline hover:text-green-700">Quitar</button>
+                </div>
+              )}
+            </div>
+
             {/* Subtotal de artículos */}
             <div className="flex items-center justify-between mb-2">
               <span className="text-base md:text-sm text-gray-600">Subtotal de artículos:</span>
@@ -637,9 +695,9 @@ const CartDrawer = () => {
             </div>
 
             {/* Discount (if applicable) */}
-            {GLOBAL_DISCOUNT_RATE > 0 && (
+            {currentDiscountRate > 0 && (
               <div className="flex items-center justify-between mb-2 text-green-600">
-                <span className="text-base md:text-sm">Descuento ({(GLOBAL_DISCOUNT_RATE * 100).toFixed(0)}%):</span>
+                <span className="text-base md:text-sm">Descuento ({(currentDiscountRate * 100).toFixed(0)}%):</span>
                 <span className="text-xl md:text-lg font-semibold">
                   -${discountAmount.toFixed(2)} MXN
                 </span>
