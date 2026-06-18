@@ -1,6 +1,6 @@
 
 export const API_BASE_URL = 'https://pepetoys-backend.mindnt.com.mx';
-export const PAYMENT_API_BASE_URL = 'https://pepetoys-backend.mindnt.com.mx';
+export const PAYMENT_API_BASE_URL = 'http://128.199.0.156:9456';
 
 /**
  * Returns the current date in YYYY-MM-DD format.
@@ -271,6 +271,28 @@ export const processCardPayment = async (paymentData) => {
         return data;
     } catch (error) {
         console.error('Failed to process card payment:', error);
+        throw error;
+    }
+};
+
+/**
+ * Validates a discount code.
+ * Endpoint: /promotions/validate-code?code={code}
+ */
+export const validateDiscountCode = async (code) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/promotions/validate-code?code=${code}`, {
+            method: 'GET',
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Failed to validate discount code:", error);
         throw error;
     }
 };
