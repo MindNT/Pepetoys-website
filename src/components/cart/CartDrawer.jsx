@@ -288,6 +288,8 @@ const CartDrawer = () => {
           totalAmount: finalTotal,
           waUrl: waUrl,
           paidByCard: fromCardPayment,
+          discountAmount: discountAmount,
+          discountPercentage: waCurrentDiscountRate,
         });
         setShowSuccessModal(true);
       } else {
@@ -1205,9 +1207,9 @@ const CartDrawer = () => {
                       <span>Subtotal artículos:</span>
                       <span>${itemsTotal.toFixed(2)}</span>
                     </div>
-                    {GLOBAL_DISCOUNT_RATE > 0 && (
+                    {currentDiscountRate > 0 && (
                       <div className="flex justify-between text-sm text-green-600 font-medium">
-                        <span>Descuento ({(GLOBAL_DISCOUNT_RATE * 100).toFixed(0)}%):</span>
+                        <span>Descuento ({(currentDiscountRate * 100).toFixed(0)}%):</span>
                         <span>-${discountAmount.toFixed(2)}</span>
                       </div>
                     )}
