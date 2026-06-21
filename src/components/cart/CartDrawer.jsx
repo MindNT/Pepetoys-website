@@ -13,6 +13,7 @@ const GLOBAL_DISCOUNT_RATE = 0.0;
 // ARTÍCULOS QUE REQUIEREN COTIZACIÓN DE ENVÍO MANUAL
 const RESTRICTED_ITEMS = [123, 122, 124];
 const EXCLUSIVE_CATEGORY = 23;
+const NO_DISCOUNT_CATEGORY = 24;
 
 const CartDrawer = () => {
   const {
@@ -125,7 +126,19 @@ const CartDrawer = () => {
   // --- Cálculos de Totales ---
   const itemsTotal = getTotalPrice(); // Total antes de promociones
   const currentDiscountRate = appliedDiscount ? appliedDiscount.percentage : GLOBAL_DISCOUNT_RATE;
-  const discountAmount = itemsTotal * currentDiscountRate;
+  
+  const discountableTotal = cartItems.reduce((total, item) => {
+    const hasNoDiscountCategory = Array.isArray(item.category_ids) 
+      ? item.category_ids.some(id => Number(id) === NO_DISCOUNT_CATEGORY)
+      : Number(item.category_id) === NO_DISCOUNT_CATEGORY;
+      
+    if (hasNoDiscountCategory) {
+      return total;
+    }
+    return total + ((item.priceNumber || 0) * item.quantity);
+  }, 0);
+
+  const discountAmount = discountableTotal * currentDiscountRate;
   const netItemsTotal = itemsTotal - discountAmount;
 
   const hasRestrictedItem = cartItems.some(item => RESTRICTED_ITEMS.includes(Number(item.id)));
@@ -387,12 +400,7 @@ const CartDrawer = () => {
   // Manejar selección de opción de entrega
   const handleDeliveryOptionChange = (option) => {
     setDeliveryOption(option);
-    // Si es exterior, forzar Mercado Pago
-    if (option === 'exterior') {
-      setPaymentMethod('Mercado Pago');
-    } else {
-      setPaymentMethod('');
-    }
+    setPaymentMethod('');
     // Limpiar datos de dirección si cambia de opción
     if (option === 'pickup') {
       setAddressData({
@@ -893,14 +901,16 @@ const CartDrawer = () => {
             </div>
 
             {/* Payment Options */}
-            {deliveryOption === 'pickup' && (
+            {deliveryOption && (
               <div className="mb-6">
                 <h4 className="text-lg font-semibold text-[#1A237E] mb-3">Método de Pago</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {['Efectivo', 'Tarjeta', 'Transferencia'].map((method) => (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {(deliveryOption === 'pickup' 
+                    ? ['Efectivo', 'Tarjeta', 'Transferencia', 'Oxxo']
+                    : ['Tarjeta', 'Transferencia']).map((method) => (
                     <label
                       key={method}
-                      className={`flex items-center justify-center py-3 px-4 border-2 rounded-lg cursor-pointer transition-all ${paymentMethod === method
+                      className={`flex items-center justify-center py-3 px-2 border-2 rounded-lg cursor-pointer transition-all text-sm md:text-base ${paymentMethod === method
                         ? 'border-[#008F24] bg-[#008F24]/5 text-[#008F24] font-semibold'
                         : 'border-gray-200 text-gray-600 hover:border-gray-300'
                         }`}
@@ -913,19 +923,38 @@ const CartDrawer = () => {
                         onChange={(e) => setPaymentMethod(e.target.value)}
                         className="hidden"
                       />
-                      <span>{method}</span>
+                      <span className="text-center">{method}</span>
                     </label>
                   ))}
                 </div>
-              </div>
-            )}
 
-            {deliveryOption === 'exterior' && (
-              <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 flex items-center gap-3">
-                <div className="text-blue-700">
-                  <p className="font-semibold text-sm">Método de pago para envíos:</p>
-                  <p className="text-sm">El pago se realizará de forma segura mediante tarjeta (procesado por Mercado Pago).</p>
-                </div>
+                {/* Info about selected payment method */}
+                {paymentMethod === 'Transferencia' && (
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 mt-3">
+                    <p className="font-semibold text-sm text-blue-800 mb-1">Datos para Transferencia:</p>
+                    <p className="text-sm text-blue-700 whitespace-pre-wrap">
+                      014180605708119944{'\n'}
+                      Santander - yilian martell hernandez.{'\n'}
+                      Transferencias
+                    </p>
+                  </div>
+                )}
+                
+                {paymentMethod === 'Oxxo' && deliveryOption === 'pickup' && (
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 mt-3">
+                    <p className="font-semibold text-sm text-blue-800 mb-1">Datos para pago en Oxxo:</p>
+                    <p className="text-sm text-blue-700 whitespace-pre-wrap">
+                      5579070161062644{'\n'}
+                      Oxxo
+                    </p>
+                  </div>
+                )}
+
+                {paymentMethod === 'Tarjeta' && deliveryOption === 'exterior' && (
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 mt-3">
+                    <p className="text-sm text-blue-700">El pago se realizará de forma segura mediante tarjeta (procesado por Mercado Pago).</p>
+                  </div>
+                )}
               </div>
             )}
 
