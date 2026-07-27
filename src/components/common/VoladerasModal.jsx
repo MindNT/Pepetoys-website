@@ -58,6 +58,7 @@ const VoladerasModal = ({ isOpen, onClose }) => {
                         price: item.price ? (typeof item.price === 'number' ? `$${item.price} MXN` : item.price) : "Precio no disponible",
                         description: item.description || "Sin descripción",
                         image: formattedImageUrl,
+                        images: Array.isArray(item.images) ? item.images : [],
                         available_days: item.available_days,
                         atributo_1: item.atributo_1,
                         atributo_2: item.atributo_2,

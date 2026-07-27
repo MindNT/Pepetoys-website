@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Plus, Minus, ShoppingCart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Plus, Minus, ShoppingCart, ChevronLeft, ChevronRight } from 'lucide-react';
 import Button from './Button';
 import { useCart } from '../../context/CartContext';
 import formatGoogleDriveUrl from '../../utils/formatGoogleDriveUrl';
@@ -8,9 +8,34 @@ const BASE_URL = import.meta.env.BASE_URL;
 
 const ProductModal = ({ isOpen, onClose, product, loading }) => {
     const [quantity, setQuantity] = useState(1);
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const { addToCart, openCart } = useCart();
 
+    // Reset state when product changes
+    useEffect(() => {
+        setQuantity(1);
+        setSelectedImageIndex(0);
+    }, [product?.id, isOpen]);
+
     if (!isOpen) return null;
+
+    // Build images array from product.images or fallback to single image
+    const allImages = (() => {
+        if (Array.isArray(product?.images) && product.images.length > 0) {
+            return product.images
+                .filter(u => u && typeof u === 'string' && u.trim() && u.startsWith('http'))
+                .map(u => formatGoogleDriveUrl(u));
+        }
+        // Fallback to single image
+        const raw = product?.img_item || product?.image || `${BASE_URL}shopping.jpg`;
+        return [raw.startsWith('http') ? formatGoogleDriveUrl(raw) : raw];
+    })();
+
+    const currentImage = allImages[selectedImageIndex] || allImages[0];
+    const hasMultipleImages = allImages.length > 1;
+
+    const prevImage = () => setSelectedImageIndex(i => (i === 0 ? allImages.length - 1 : i - 1));
+    const nextImage = () => setSelectedImageIndex(i => (i === allImages.length - 1 ? 0 : i + 1));
 
     // Helper to get product attributes (atributo_1 and atributo_2)
     const getAttributes = () => {
@@ -25,10 +50,6 @@ const ProductModal = ({ isOpen, onClose, product, loading }) => {
     };
 
     const attributes = getAttributes();
-
-    // Image logic - Format Google Drive URLs
-    const rawImageSrc = product?.img_item || product?.image || `${BASE_URL}shopping.jpg`;
-    const imageSrc = rawImageSrc.startsWith('http') ? formatGoogleDriveUrl(rawImageSrc) : rawImageSrc;
 
     // Price logic
     const displayPrice = product?.price ? (typeof product.price === 'number' ? `$${product.price} MXN` : product.price) : "Consultar";
@@ -60,13 +81,78 @@ const ProductModal = ({ isOpen, onClose, product, loading }) => {
                         {product?.name || "Cargando..."}
                     </h2>
 
-                    {/* Image - Centered */}
-                    <div className="w-full flex items-center justify-center mb-6">
-                        <img
-                            src={imageSrc}
-                            alt={product?.name || "Producto"}
-                            className="w-full max-w-[300px] object-contain drop-shadow-md transform hover:scale-105 transition-transform duration-500"
-                        />
+                    {/* Image Gallery */}
+                    <div className="w-full mb-6">
+                        {/* Main Image */}
+                        <div className="relative w-full flex items-center justify-center">
+                            {hasMultipleImages && (
+                                <button
+                                    onClick={prevImage}
+                                    className="absolute left-1 z-10 w-8 h-8 bg-black/30 hover:bg-black/50 rounded-full flex items-center justify-center transition-colors"
+                                    aria-label="Imagen anterior"
+                                >
+                                    <ChevronLeft size={18} className="text-white" />
+                                </button>
+                            )}
+
+                            <img
+                                src={currentImage}
+                                alt={`${product?.name || "Producto"} ${selectedImageIndex + 1}`}
+                                className="w-full max-w-[300px] object-contain drop-shadow-md transform hover:scale-105 transition-transform duration-500"
+                            />
+
+                            {hasMultipleImages && (
+                                <button
+                                    onClick={nextImage}
+                                    className="absolute right-1 z-10 w-8 h-8 bg-black/30 hover:bg-black/50 rounded-full flex items-center justify-center transition-colors"
+                                    aria-label="Siguiente imagen"
+                                >
+                                    <ChevronRight size={18} className="text-white" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Thumbnails */}
+                        {hasMultipleImages && (
+                            <div className="flex justify-center gap-2 mt-3 flex-wrap">
+                                {allImages.map((img, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => setSelectedImageIndex(index)}
+                                        className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                                            index === selectedImageIndex
+                                                ? 'border-[#008F24] shadow-md scale-110'
+                                                : 'border-gray-200 opacity-60 hover:opacity-100 hover:border-gray-400'
+                                        }`}
+                                        aria-label={`Imagen ${index + 1}`}
+                                    >
+                                        <img
+                                            src={img}
+                                            alt={`thumb ${index + 1}`}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Dot indicators (alternative to thumbnails for many images) */}
+                        {hasMultipleImages && allImages.length <= 8 && (
+                            <div className="flex justify-center gap-1.5 mt-2">
+                                {allImages.map((_, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => setSelectedImageIndex(index)}
+                                        className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                                            index === selectedImageIndex
+                                                ? 'bg-[#008F24] w-4'
+                                                : 'bg-gray-300 hover:bg-gray-400'
+                                        }`}
+                                        aria-label={`Imagen ${index + 1}`}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Attributes Row (Grid) */}
