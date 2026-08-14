@@ -82,6 +82,12 @@ const CartDrawer = () => {
     setIsApplyingDiscount(true);
     setDiscountError('');
     try {
+      const code = discountCode.trim().toUpperCase();
+      if (code === 'VETC20A1' && itemsTotal < 4000) {
+        setDiscountError(`El código ${code} requiere un mínimo de $4000.00 MXN en artículos. Te faltan $${(4000 - itemsTotal).toFixed(2)} MXN.`);
+        setAppliedDiscount(null);
+        return;
+      }
       const response = await validateDiscountCode(discountCode.trim());
       if (response && response.is_valid) {
         setAppliedDiscount({ code: discountCode.trim().toUpperCase(), percentage: response.discount_percentage });
