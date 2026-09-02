@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, ImageIcon } from 'lucide-react';
 
 // Use Vite's glob to automatically detect all files in the directory at build/dev time
@@ -7,14 +7,36 @@ const availableFilenames = Object.keys(rawImages).map(path => path.split('/').po
 
 const ProyectosEntregadosModal = ({ isOpen, onClose }) => {
     const [loadedImages, setLoadedImages] = useState([]);
+    const [imageDimensions, setImageDimensions] = useState({});
 
     if (!isOpen) return null;
 
-    const handleImageLoad = (filename) => {
+    const handleImageLoad = (filename, e) => {
         if (!loadedImages.includes(filename)) {
             setLoadedImages(prev => [...prev, filename]);
         }
+        if (!imageDimensions[filename]) {
+            const img = e.target;
+            setImageDimensions(prev => ({
+                ...prev,
+                [filename]: { width: img.naturalWidth, height: img.naturalHeight }
+            }));
+        }
     };
+
+    const sortedFilenames = useMemo(() => {
+        return [...availableFilenames].sort((a, b) => {
+            const dimA = imageDimensions[a];
+            const dimB = imageDimensions[b];
+
+            if (!dimA || !dimB) return 0;
+
+            const isVerticalA = dimA.height > dimA.width;
+            const isVerticalB = dimB.height > dimB.width;
+
+            return (isVerticalA ? 0 : 1) - (isVerticalB ? 0 : 1);
+        });
+    }, [imageDimensions]);
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
@@ -45,7 +67,7 @@ const ProyectosEntregadosModal = ({ isOpen, onClose }) => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-min">
-                            {availableFilenames.map(filename => (
+                            {sortedFilenames.map(filename => (
                                 <div 
                                     key={filename} 
                                     className={`w-full overflow-hidden rounded-xl flex items-center justify-center min-h-[150px]
@@ -54,7 +76,7 @@ const ProyectosEntregadosModal = ({ isOpen, onClose }) => {
                                     <img
                                         src={`${import.meta.env.BASE_URL}proyectosentregados/${filename}`}
                                         alt={`Proyecto Entregado ${filename}`}
-                                        onLoad={() => handleImageLoad(filename)}
+                                        onLoad={(e) => handleImageLoad(filename, e)}
                                         className={`w-full h-auto object-cover rounded-xl ${loadedImages.includes(filename) ? 'opacity-100' : 'opacity-0'} transition-opacity duration-500`}
                                     />
                                 </div>
