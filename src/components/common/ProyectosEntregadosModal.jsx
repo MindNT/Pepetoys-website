@@ -9,6 +9,20 @@ const ProyectosEntregadosModal = ({ isOpen, onClose }) => {
     const [loadedImages, setLoadedImages] = useState([]);
     const [imageDimensions, setImageDimensions] = useState({});
 
+    const sortedFilenames = useMemo(() => {
+        return [...availableFilenames].sort((a, b) => {
+            const dimA = imageDimensions[a];
+            const dimB = imageDimensions[b];
+
+            if (!dimA || !dimB) return 0;
+
+            const isVerticalA = dimA.height > dimA.width;
+            const isVerticalB = dimB.height > dimB.width;
+
+            return (isVerticalA ? 0 : 1) - (isVerticalB ? 0 : 1);
+        });
+    }, [imageDimensions]);
+
     if (!isOpen) return null;
 
     const handleImageLoad = (filename, e) => {
@@ -23,20 +37,6 @@ const ProyectosEntregadosModal = ({ isOpen, onClose }) => {
             }));
         }
     };
-
-    const sortedFilenames = useMemo(() => {
-        return [...availableFilenames].sort((a, b) => {
-            const dimA = imageDimensions[a];
-            const dimB = imageDimensions[b];
-
-            if (!dimA || !dimB) return 0;
-
-            const isVerticalA = dimA.height > dimA.width;
-            const isVerticalB = dimB.height > dimB.width;
-
-            return (isVerticalA ? 0 : 1) - (isVerticalB ? 0 : 1);
-        });
-    }, [imageDimensions]);
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
