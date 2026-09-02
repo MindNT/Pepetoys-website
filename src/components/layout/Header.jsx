@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ShoppingCart, User } from 'lucide-react';
+import { ShoppingCart, User, ArrowBigLeft } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import africanGrey from '../../assets/african_grey_pointing.png';
 import logoLetra from '../../assets/logo letra.jpg';
 import { useCart } from '../../context/CartContext';
@@ -9,6 +10,8 @@ const Header = () => {
   const { openCart, getTotalItems } = useCart();
   const totalItems = getTotalItems();
   const [isConocenosOpen, setIsConocenosOpen] = useState(false);
+  const location = useLocation();
+  const isHome = location.pathname === '/';
 
   return (
     <header className="relative z-50 bg-white shadow-sm">
@@ -18,7 +21,16 @@ const Header = () => {
       <div className="hidden md:flex max-w-[1440px] mx-auto h-[190px] px-8 lg:px-12 items-center justify-between">
 
         {/* Logo - LEFT */}
-        <div className="flex items-center">
+        <div className="flex items-center gap-5">
+          {!isHome && (
+            <Link
+              to="/"
+              className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-5 py-2.5 rounded-full transition-all duration-300 hover:shadow-lg hover:scale-105"
+            >
+              <ArrowBigLeft size={18} className="w-5 h-5" />
+              <span className="font-sans text-base lg:text-xl font-semibold whitespace-nowrap">Regresar</span>
+            </Link>
+          )}
           <img src={logoLetra} alt="Pepe's Toys Logo" className="h-[165px] lg:h-[180px] w-auto object-contain" />
         </div>
 
@@ -57,6 +69,17 @@ const Header = () => {
           <img src={logoLetra} alt="Pepe's Toys Logo" className="h-[90px] w-auto object-contain" />
           <img src={africanGrey} alt="Loro guía" className="h-[70px] w-auto object-contain" />
         </div>
+
+        {/* Row 1b: Regresar (solo fuera de Home) */}
+        {!isHome && (
+          <Link
+            to="/"
+            className="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 text-white px-3.5 py-2 rounded-full transition-all duration-300 hover:shadow-lg hover:scale-105"
+          >
+            <ArrowBigLeft size={16} className="w-4 h-4" />
+            <span className="font-sans text-sm font-semibold whitespace-nowrap">Regresar</span>
+          </Link>
+        )}
 
         {/* Row 2: Buttons */}
         <div className="flex items-center justify-center gap-3">

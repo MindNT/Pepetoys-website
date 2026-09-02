@@ -5,7 +5,7 @@ import Header from '../layout/Header';
 import Footer from '../layout/Footer';
 import ProductModal from '../common/ProductModal';
 import CategoryBanner from '../sections/CategoryBanner';
-import { ArrowBigRight, ShoppingCart, Plus, Search } from 'lucide-react';
+import { ShoppingCart, Plus, Search } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import formatGoogleDriveUrl from '../../utils/formatGoogleDriveUrl';
 import ProductCard from '../common/ProductCard';
@@ -159,14 +159,6 @@ const CategoryPage = () => {
 
     return (
         <div className="min-h-screen bg-white relative font-['Inter']">
-            {/* Back Button */}
-            <Link
-                to="/"
-                className="absolute top-4 left-4 z-50 w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors border border-gray-600 text-white shadow-lg"
-            >
-                <ArrowBigRight className="rotate-180" />
-            </Link>
-
             <CategoryBanner />
             <Header />
 
