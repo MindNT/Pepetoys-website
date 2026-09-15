@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Plus, Minus, Trash2, ShoppingBag, Loader2, MapPin, Store, CreditCard, Download, AlertCircle, CheckCircle2, ChevronLeft, Lock } from 'lucide-react';
+import { X, Plus, Minus, Trash2, ShoppingBag, Loader2, MapPin, Store, CreditCard, Download, AlertCircle, CheckCircle2, ChevronLeft, Lock, Banknote, ArrowLeftRight } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import ConfirmDialog from './ConfirmDialog';
 import OrderSuccessModal from './OrderSuccessModal';
@@ -14,6 +14,88 @@ const GLOBAL_DISCOUNT_RATE = 0.0;
 const RESTRICTED_ITEMS = [123, 122, 124];
 const EXCLUSIVE_CATEGORY = 23;
 const NO_DISCOUNT_CATEGORY = 24;
+
+// Detecta la marca de la tarjeta por su número (BIN).
+// Visa empieza con 4; Mastercard con 51-55 o 2221-2720.
+const detectCardBrand = (digits) => {
+  const n = String(digits).replace(/\D/g, '');
+  if (!n) return null;
+  if (n.startsWith('4')) return 'visa';
+  if (/^(5[1-5]|222[1-9]|22[3-9]\d|2[3-6]\d{2}|27[01]\d|2720)/.test(n)) return 'master';
+  return null;
+};
+
+// Combina la marca detectada con el tipo de producto (crédito/débito)
+// para generar el payment_method_id que espera el backend.
+const buildCardTypeId = (brand, productType) => {
+  if (brand === 'visa') return productType === 'debit' ? 'debvisa' : 'visa';
+  if (brand === 'master') return productType === 'debit' ? 'debmaster' : 'master';
+  return null;
+};
+
+// --- Validaciones de formato para guiar al usuario ---
+const isDigitsOnly = (value) => /^\d+$/.test(value);
+const isPhoneValid = (value) => isDigitsOnly(String(value).replace(/\D/g, '')) && String(value).replace(/\D/g, '').length === 10;
+const isPostalCodeValid = (value) => /^\d{5}$/.test(value.trim());
+const isEmailValid = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
+
+// Formatea un teléfono de 10 dígitos como "999 123 4567"
+const formatPhone = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+  return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+};
+
+// Valida el formulario de tarjeta y devuelve un objeto de errores por campo
+const validateCardData = (data) => {
+  const errors = {};
+  const cardDigits = data.cardNumber.replace(/\s/g, '');
+  const brand = detectCardBrand(cardDigits);
+
+  if (!data.cardNumber.trim()) {
+    errors.cardNumber = 'Ingresa el número de tu tarjeta.';
+  } else if (cardDigits.length !== 16) {
+    errors.cardNumber = 'El número debe tener 16 dígitos.';
+  } else if (!brand) {
+    errors.cardNumber = 'Marca no reconocida. Solo aceptamos Visa o Mastercard.';
+  }
+
+  const month = parseInt(data.expirationMonth, 10);
+  if (!data.expirationMonth.trim()) {
+    errors.expirationMonth = 'Ingresa el mes.';
+  } else if (data.expirationMonth.length !== 2 || !(month >= 1 && month <= 12)) {
+    errors.expirationMonth = 'Mes inválido (01-12).';
+  }
+
+  const currentYear = new Date().getFullYear();
+  const year = parseInt(data.expirationYear, 10);
+  if (!data.expirationYear.trim()) {
+    errors.expirationYear = 'Ingresa el año.';
+  } else if (data.expirationYear.length !== 4 || !(year >= currentYear && year <= currentYear + 15)) {
+    errors.expirationYear = `Vence entre ${currentYear} y ${currentYear + 15}.`;
+  }
+
+  if (!data.cvc.trim()) {
+    errors.cvc = 'Ingresa el CVC.';
+  } else if (data.cvc.length !== 3) {
+    errors.cvc = 'El CVC son 3 dígitos.';
+  }
+
+  if (!data.cardholderName.trim()) {
+    errors.cardholderName = 'Ingresa el nombre del titular.';
+  }
+
+  if (!data.payerFirstName.trim()) errors.payerFirstName = 'Requerido.';
+  if (!data.payerLastName.trim()) errors.payerLastName = 'Requerido.';
+  if (!data.payerEmail.trim()) {
+    errors.payerEmail = 'Ingresa un correo.';
+  } else if (!isEmailValid(data.payerEmail)) {
+    errors.payerEmail = 'Formato de correo inválido.';
+  }
+
+  return errors;
+};
 
 const CartDrawer = () => {
   const {
@@ -33,9 +115,12 @@ const CartDrawer = () => {
   const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [customerName, setCustomerName] = useState('');
+  const [customerNameError, setCustomerNameError] = useState('');
   const [deliveryOption, setDeliveryOption] = useState(''); // 'pickup', 'exterior'
   const [paymentMethod, setPaymentMethod] = useState(''); // 'Efectivo', 'Tarjeta', 'Transferencia', 'Mercado Pago'
+  const [deliveryError, setDeliveryError] = useState('');
   const [orderSuccessData, setOrderSuccessData] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -57,6 +142,7 @@ const CartDrawer = () => {
     payerFirstName: '',
     payerLastName: '',
   });
+  const [cardProductType, setCardProductType] = useState('credit'); // 'credit' | 'debit'
 
   // Address form fields
   const [addressData, setAddressData] = useState({
@@ -69,6 +155,8 @@ const CartDrawer = () => {
     postalCode: '',
     deliveryPhone: ''
   });
+  const [addressErrors, setAddressErrors] = useState({});
+  const [cardFormErrors, setCardFormErrors] = useState({});
 
   const [voladerasIds, setVoladerasIds] = useState([EXCLUSIVE_CATEGORY]);
 
@@ -189,6 +277,8 @@ const CartDrawer = () => {
     const firstName = cardData.payerFirstName.trim();
     const lastName = cardData.payerLastName.trim();
     const fullName = cardData.cardholderName.trim() || `${firstName} ${lastName}`;
+    const detectedBrand = detectCardBrand(cardData.cardNumber);
+    const cardTypeId = detectedBrand ? buildCardTypeId(detectedBrand, cardProductType) : cardData.cardType;
     return {
       transaction_amount: parseFloat(finalTotal.toFixed(2)),
       card_number: cardData.cardNumber.replace(/\s/g, ''),
@@ -196,7 +286,7 @@ const CartDrawer = () => {
       expiration_year: parseInt(cardData.expirationYear, 10),
       cvc: cardData.cvc,
       cardholder_name: fullName,
-      payment_method_id: cardData.cardType,
+      payment_method_id: cardTypeId,
       payer: {
         email: cardData.payerEmail,
         first_name: firstName,
@@ -213,6 +303,13 @@ const CartDrawer = () => {
   const handleCardPaymentSubmit = async (e) => {
     e.preventDefault();
     setCardError(null);
+
+    const errors = validateCardData(cardData);
+    if (Object.keys(errors).length > 0) {
+      setCardFormErrors(errors);
+      return;
+    }
+
     setIsSubmitting(true);
     setCardFlowStep('processing');
 
@@ -324,16 +421,15 @@ const CartDrawer = () => {
 
   const handlePhoneSubmit = async (e) => {
     e.preventDefault();
+    setPhoneError('');
 
-    if (!phone || phone.trim() === '') {
-      alert('Por favor ingresa tu número de teléfono');
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (!phoneDigits) {
+      setPhoneError('Por favor ingresa tu número de teléfono.');
       return;
     }
-
-    // Validar formato básico de teléfono (solo números, mínimo 10 dígitos)
-    const phoneDigits = phone.replace(/\D/g, '');
-    if (phoneDigits.length < 10) {
-      alert('Por favor ingresa un número de teléfono válido (mínimo 10 dígitos)');
+    if (!isPhoneValid(phoneDigits)) {
+      setPhoneError('Ingresa un celular válido de 10 dígitos, ej: 999 123 4567.');
       return;
     }
 
@@ -378,9 +474,15 @@ const CartDrawer = () => {
 
   const handleNameSubmit = async (e) => {
     e.preventDefault();
+    setCustomerNameError('');
 
-    if (!customerName || customerName.trim() === '') {
-      alert('Por favor ingresa tu nombre');
+    const trimmedName = customerName.trim();
+    if (!trimmedName) {
+      setCustomerNameError('Por favor ingresa tu nombre.');
+      return;
+    }
+    if (trimmedName.split(/\s+/).length < 2) {
+      setCustomerNameError('Ingresa tu nombre y apellido, ej: Juan Pérez.');
       return;
     }
 
@@ -407,6 +509,8 @@ const CartDrawer = () => {
   const handleDeliveryOptionChange = (option) => {
     setDeliveryOption(option);
     setPaymentMethod('');
+    setDeliveryError('');
+    setAddressErrors({});
     // Limpiar datos de dirección si cambia de opción
     if (option === 'pickup') {
       setAddressData({
@@ -428,35 +532,55 @@ const CartDrawer = () => {
       ...prev,
       [field]: value
     }));
+    setAddressErrors(prev => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
   };
 
   // Validar y confirmar opción de entrega
   const handleDeliveryConfirm = async () => {
+    setDeliveryError('');
     if (!deliveryOption) {
-      alert('Por favor selecciona un método de entrega');
+      setDeliveryError('Por favor selecciona un método de entrega.');
       return;
     }
     if (!paymentMethod) {
-      alert('Por favor selecciona un método de pago');
+      setDeliveryError('Por favor selecciona un método de pago.');
       return;
     }
 
     if (deliveryOption === 'exterior') {
+      const errors = {};
       const requiredFields = [
-        { field: 'recipientName', label: 'Nombre de quien recibe' },
-        { field: 'street', label: 'Calle' },
-        { field: 'number', label: 'Número' },
-        { field: 'crossStreet', label: 'Entre calle' },
-        { field: 'neighborhood', label: 'Colonia' },
-        { field: 'facadeColor', label: 'Color fachada' },
-        { field: 'postalCode', label: 'Código postal' },
-        { field: 'deliveryPhone', label: 'Teléfono' },
+        'recipientName',
+        'street',
+        'number',
+        'crossStreet',
+        'neighborhood',
+        'facadeColor',
       ];
-      for (const { field, label } of requiredFields) {
+      for (const field of requiredFields) {
         if (!addressData[field] || addressData[field].trim() === '') {
-          alert(`Por favor completa el campo: ${label}`);
-          return;
+          errors[field] = 'Completa este campo.';
         }
+      }
+      if (!addressData.postalCode || addressData.postalCode.trim() === '') {
+        errors.postalCode = 'Completa este campo.';
+      } else if (!isPostalCodeValid(addressData.postalCode)) {
+        errors.postalCode = 'El código postal debe ser de 5 dígitos, ej: 97000.';
+      }
+      if (!addressData.deliveryPhone || addressData.deliveryPhone.trim() === '') {
+        errors.deliveryPhone = 'Completa este campo.';
+      } else if (!isPhoneValid(addressData.deliveryPhone)) {
+        errors.deliveryPhone = 'Celular de 10 dígitos, ej: 999 123 4567.';
+      }
+
+      if (Object.keys(errors).length > 0) {
+        setAddressErrors(errors);
+        return;
       }
     }
 
@@ -486,12 +610,20 @@ const CartDrawer = () => {
 
   const handleCardFormChange = (field, value) => {
     setCardData(prev => ({ ...prev, [field]: value }));
+    setCardFormErrors(prev => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
   };
 
   const handleCloseCardFlow = () => {
     setShowCardFlow(false);
     setCardFlowStep('detail');
     setCardError(null);
+    setCardFormErrors({});
+    setCardProductType('credit');
     setCardData({
       cardNumber: '',
       expirationMonth: '',
@@ -508,12 +640,14 @@ const CartDrawer = () => {
   const handlePhoneCancel = () => {
     setShowPhoneDialog(false);
     setPhone('');
+    setPhoneError('');
     setIsVerifying(false);
   };
 
   const handleNameCancel = () => {
     setShowNameDialog(false);
     setCustomerName('');
+    setCustomerNameError('');
     // Volver al diálogo de teléfono
     setShowPhoneDialog(true);
   };
@@ -522,6 +656,8 @@ const CartDrawer = () => {
     setShowDeliveryDialog(false);
     setDeliveryOption('');
     setPaymentMethod('');
+    setDeliveryError('');
+    setAddressErrors({});
     setAddressData({
       recipientName: '',
       street: '',
@@ -787,13 +923,20 @@ const CartDrawer = () => {
                   type="tel"
                   id="phone"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="9991234567"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent text-lg"
+                  onChange={(e) => { setPhone(formatPhone(e.target.value)); setPhoneError(''); }}
+                  placeholder="999 123 4567"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent text-lg tracking-wide ${phoneError ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                   required
                   disabled={isVerifying || isSubmitting}
                   autoFocus
                 />
+                {phoneError ? (
+                  <p className="text-sm text-red-600 mt-2 flex items-center gap-1">
+                    <AlertCircle size={15} /> {phoneError}
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400 mt-2">Sin espacios ni lada. Ej: 999 123 4567</p>
+                )}
               </div>
 
               <div className="flex gap-3">
@@ -837,7 +980,9 @@ const CartDrawer = () => {
           setShowSuccessModal(false);
           setOrderSuccessData(null);
           setPhone('');
+          setPhoneError('');
           setCustomerName('');
+          setCustomerNameError('');
         }}
         orderData={orderSuccessData}
       />
@@ -910,55 +1055,86 @@ const CartDrawer = () => {
             {deliveryOption && (
               <div className="mb-6">
                 <h4 className="text-lg font-semibold text-[#1A237E] mb-3">Método de Pago</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {(deliveryOption === 'pickup' 
-                    ? ['Efectivo', 'Tarjeta', 'Transferencia', 'Oxxo']
-                    : ['Tarjeta', 'Transferencia']).map((method) => (
-                    <label
-                      key={method}
-                      className={`flex items-center justify-center py-3 px-2 border-2 rounded-lg cursor-pointer transition-all text-sm md:text-base ${paymentMethod === method
-                        ? 'border-[#008F24] bg-[#008F24]/5 text-[#008F24] font-semibold'
-                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                <div className="grid grid-cols-2 gap-3">
+                  {(deliveryOption === 'pickup'
+                    ? [
+                        { id: 'Efectivo', label: 'Efectivo', desc: 'Paga al recoger en tienda', icon: Banknote, activeBg: 'bg-emerald-100 text-emerald-600' },
+                        { id: 'Tarjeta', label: 'Tarjeta', desc: 'Pago seguro en línea', icon: CreditCard, activeBg: 'bg-indigo-100 text-[#1A237E]' },
+                        { id: 'Transferencia', label: 'Transferencia', desc: 'Deposita desde tu banco', icon: ArrowLeftRight, activeBg: 'bg-blue-100 text-blue-600' },
+                        { id: 'Oxxo', label: 'Oxxo', desc: 'Paga en tiendas Oxxo', icon: Store, activeBg: 'bg-orange-100 text-orange-500' },
+                      ]
+                    : [
+                        { id: 'Tarjeta', label: 'Tarjeta', desc: 'Pago seguro en línea', icon: CreditCard, activeBg: 'bg-indigo-100 text-[#1A237E]' },
+                        { id: 'Transferencia', label: 'Transferencia', desc: 'Deposita desde tu banco', icon: ArrowLeftRight, activeBg: 'bg-blue-100 text-blue-600' },
+                        { id: 'Oxxo', label: 'Oxxo', desc: 'Paga en tiendas Oxxo', icon: Store, activeBg: 'bg-orange-100 text-orange-500' },
+                      ]).map(method => {
+                    const isSelected = paymentMethod === method.id;
+                    return (
+                      <label
+                        key={method.id}
+                        className={`relative flex flex-col items-center justify-center gap-1.5 p-4 md:p-5 border-2 rounded-2xl cursor-pointer transition-all text-center ${
+                          isSelected
+                            ? 'border-[#008F24] bg-[#008F24]/10 shadow-md shadow-green-100'
+                            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
                         }`}
-                    >
-                      <input
-                        type="radio"
-                        name="payment"
-                        value={method}
-                        checked={paymentMethod === method}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="hidden"
-                      />
-                      <span className="text-center">{method}</span>
-                    </label>
-                  ))}
+                      >
+                        <input
+                          type="radio"
+                          name="payment"
+                          value={method.id}
+                          checked={isSelected}
+                          onChange={(e) => { setPaymentMethod(e.target.value); setDeliveryError(''); }}
+                          className="sr-only"
+                        />
+                        {isSelected && (
+                          <CheckCircle2 size={18} className="absolute top-2 right-2 text-[#008F24]" />
+                        )}
+                        <span className={`flex items-center justify-center w-11 h-11 rounded-full transition-colors ${isSelected ? method.activeBg : 'bg-gray-100 text-gray-500'}`}>
+                          <method.icon size={22} />
+                        </span>
+                        <span className={`font-semibold text-sm ${isSelected ? 'text-[#008F24]' : 'text-gray-800'}`}>
+                          {method.label}
+                        </span>
+                        <span className={`text-xs leading-snug ${isSelected ? 'text-[#008F24]/80' : 'text-gray-500'}`}>
+                          {method.desc}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
 
                 {/* Info about selected payment method */}
                 {paymentMethod === 'Transferencia' && (
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 mt-3">
-                    <p className="font-semibold text-sm text-blue-800 mb-1">Datos para Transferencia:</p>
-                    <p className="text-sm text-blue-700 whitespace-pre-wrap">
-                      014180605708119944{'\n'}
-                      Santander - yilian martell hernandez.{'\n'}
-                      Transferencias
-                    </p>
+                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 mt-3 flex items-start gap-3">
+                    <ArrowLeftRight size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-sm text-blue-800 mb-1">Datos para Transferencia:</p>
+                      <p className="text-sm text-blue-700 whitespace-pre-wrap">
+                        014180605708119944{'\n'}
+                        Santander - yilian martell hernandez.{'\n'}
+                        Transferencias
+                      </p>
+                    </div>
                   </div>
                 )}
                 
-                {paymentMethod === 'Oxxo' && deliveryOption === 'pickup' && (
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 mt-3">
-                    <p className="font-semibold text-sm text-blue-800 mb-1">Datos para pago en Oxxo:</p>
-                    <p className="text-sm text-blue-700 whitespace-pre-wrap">
-                      5579070161062644{'\n'}
-                      Oxxo
-                    </p>
+                {paymentMethod === 'Oxxo' && (
+                  <div className="p-4 bg-orange-50 rounded-xl border border-orange-200 mt-3 flex items-start gap-3">
+                    <Store size={20} className="text-orange-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-sm text-orange-800 mb-1">Datos para pago en Oxxo:</p>
+                      <p className="text-sm text-orange-700 whitespace-pre-wrap">
+                        5579070161062644{'\n'}
+                        Oxxo
+                      </p>
+                    </div>
                   </div>
                 )}
 
                 {paymentMethod === 'Tarjeta' && deliveryOption === 'exterior' && (
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 mt-3">
-                    <p className="text-sm text-blue-700">El pago se realizará de forma segura mediante tarjeta (procesado por Mercado Pago).</p>
+                  <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 mt-3 flex items-start gap-3">
+                    <Lock size={20} className="text-[#1A237E] flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-indigo-800">El pago se realizará de forma segura mediante tarjeta (procesado por Mercado Pago).</p>
                   </div>
                 )}
               </div>
@@ -979,8 +1155,11 @@ const CartDrawer = () => {
                       value={addressData.recipientName}
                       onChange={(e) => handleAddressChange('recipientName', e.target.value)}
                       placeholder="Ej: Juan Pérez"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent ${addressErrors.recipientName ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     />
+                    {addressErrors.recipientName && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle size={12} /> {addressErrors.recipientName}</p>
+                    )}
                   </div>
 
                   {/* Calle */}
@@ -993,8 +1172,11 @@ const CartDrawer = () => {
                       value={addressData.street}
                       onChange={(e) => handleAddressChange('street', e.target.value)}
                       placeholder="Ej: Calle 60"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent ${addressErrors.street ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     />
+                    {addressErrors.street && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle size={12} /> {addressErrors.street}</p>
+                    )}
                   </div>
 
                   {/* Número */}
@@ -1007,8 +1189,11 @@ const CartDrawer = () => {
                       value={addressData.number}
                       onChange={(e) => handleAddressChange('number', e.target.value)}
                       placeholder="Ej: 123"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent ${addressErrors.number ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     />
+                    {addressErrors.number && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle size={12} /> {addressErrors.number}</p>
+                    )}
                   </div>
 
                   {/* Entre calle */}
@@ -1021,8 +1206,11 @@ const CartDrawer = () => {
                       value={addressData.crossStreet}
                       onChange={(e) => handleAddressChange('crossStreet', e.target.value)}
                       placeholder="Ej: Calle 61 y 63"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent ${addressErrors.crossStreet ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     />
+                    {addressErrors.crossStreet && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle size={12} /> {addressErrors.crossStreet}</p>
+                    )}
                   </div>
 
                   {/* Colonia */}
@@ -1035,8 +1223,11 @@ const CartDrawer = () => {
                       value={addressData.neighborhood}
                       onChange={(e) => handleAddressChange('neighborhood', e.target.value)}
                       placeholder="Ej: Centro"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent ${addressErrors.neighborhood ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     />
+                    {addressErrors.neighborhood && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle size={12} /> {addressErrors.neighborhood}</p>
+                    )}
                   </div>
 
                   {/* Color fachada */}
@@ -1049,8 +1240,11 @@ const CartDrawer = () => {
                       value={addressData.facadeColor}
                       onChange={(e) => handleAddressChange('facadeColor', e.target.value)}
                       placeholder="Ej: Blanco"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent ${addressErrors.facadeColor ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     />
+                    {addressErrors.facadeColor && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle size={12} /> {addressErrors.facadeColor}</p>
+                    )}
                   </div>
 
                   {/* Código postal */}
@@ -1060,11 +1254,16 @@ const CartDrawer = () => {
                     </label>
                     <input
                       type="text"
+                      inputMode="numeric"
+                      maxLength={5}
                       value={addressData.postalCode}
-                      onChange={(e) => handleAddressChange('postalCode', e.target.value)}
+                      onChange={(e) => handleAddressChange('postalCode', e.target.value.replace(/\D/g, '').slice(0, 5))}
                       placeholder="Ej: 97000"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent ${addressErrors.postalCode ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     />
+                    {addressErrors.postalCode && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle size={12} /> {addressErrors.postalCode}</p>
+                    )}
                   </div>
 
                   {/* Teléfono */}
@@ -1074,14 +1273,28 @@ const CartDrawer = () => {
                     </label>
                     <input
                       type="tel"
+                      inputMode="numeric"
+                      maxLength={12}
                       value={addressData.deliveryPhone}
-                      onChange={(e) => handleAddressChange('deliveryPhone', e.target.value)}
-                      placeholder="Ej: 9991234567"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent"
+                      onChange={(e) => handleAddressChange('deliveryPhone', formatPhone(e.target.value))}
+                      placeholder="Ej: 999 123 4567"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent ${addressErrors.deliveryPhone ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     />
+                    {addressErrors.deliveryPhone ? (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle size={12} /> {addressErrors.deliveryPhone}</p>
+                    ) : (
+                      <p className="text-[11px] text-gray-400 mt-1">Válido solo para México, ej: 999 123 4567</p>
+                    )}
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* Delivery level error */}
+            {deliveryError && (
+              <p className="mb-3 text-sm text-red-600 flex items-center justify-center gap-1">
+                <AlertCircle size={15} /> {deliveryError}
+              </p>
             )}
 
             {/* Buttons */}
@@ -1147,13 +1360,18 @@ const CartDrawer = () => {
                   type="text"
                   id="customer-name"
                   value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
+                  onChange={(e) => { setCustomerName(e.target.value); setCustomerNameError(''); }}
                   placeholder="Ej: Juan Pérez"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent text-lg"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#008F24] focus:border-transparent text-lg ${customerNameError ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                   required
                   disabled={isSubmitting}
                   autoFocus
                 />
+                {customerNameError && (
+                  <p className="text-sm text-red-600 mt-2 flex items-center gap-1">
+                    <AlertCircle size={15} /> {customerNameError}
+                  </p>
+                )}
               </div>
 
               <div className="flex gap-3">
@@ -1307,53 +1525,88 @@ const CartDrawer = () => {
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Tipo de Tarjeta</label>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { id: 'visa', label: 'Visa Crédito' },
-                        { id: 'debvisa', label: 'Visa Débito' },
-                        { id: 'master', label: 'Mastercard Crédito' },
-                        { id: 'debmaster', label: 'Mastercard Débito' },
+                        { id: 'credit', label: 'Crédito' },
+                        { id: 'debit', label: 'Débito' },
                       ].map(({ id, label }) => (
                         <label
                           key={id}
                           className={`flex items-center gap-2 p-2.5 border-2 rounded-lg cursor-pointer transition-all text-sm font-medium ${
-                            cardData.cardType === id
+                            cardProductType === id
                               ? 'border-[#1A237E] bg-[#1A237E]/5 text-[#1A237E]'
                               : 'border-gray-200 text-gray-600 hover:border-gray-300'
                           }`}
                         >
                           <input
                             type="radio"
-                            name="cardType"
+                            name="cardProductType"
                             value={id}
-                            checked={cardData.cardType === id}
-                            onChange={() => handleCardFormChange('cardType', id)}
+                            checked={cardProductType === id}
+                            onChange={() => {
+                              setCardProductType(id);
+                              const brand = detectCardBrand(cardData.cardNumber);
+                              if (brand) handleCardFormChange('cardType', buildCardTypeId(brand, id));
+                            }}
                             className="hidden"
                           />
                           <span className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${
-                            cardData.cardType === id ? 'border-[#1A237E] bg-[#1A237E]' : 'border-gray-300'
+                            cardProductType === id ? 'border-[#1A237E] bg-[#1A237E]' : 'border-gray-300'
                           }`} />
                           {label}
                         </label>
                       ))}
                     </div>
+                    <p className="text-xs text-gray-400 mt-2">
+                      La marca de tu tarjeta (Visa o Mastercard) se detectará automáticamente al escribir el número.
+                    </p>
                   </div>
 
                   {/* Número de tarjeta */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Número de Tarjeta *</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={19}
-                      value={cardData.cardNumber}
-                      onChange={e => {
-                        const raw = e.target.value.replace(/\D/g, '').slice(0, 16);
-                        const formatted = raw.match(/.{1,4}/g)?.join(' ') || raw;
-                        handleCardFormChange('cardNumber', formatted);
-                      }}
-                      placeholder="0000 0000 0000 0000"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base tracking-widest font-mono"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={19}
+                        value={cardData.cardNumber}
+                        onChange={e => {
+                          const raw = e.target.value.replace(/\D/g, '').slice(0, 16);
+                          const formatted = raw.match(/.{1,4}/g)?.join(' ') || raw;
+                          const brand = detectCardBrand(raw);
+                          setCardData(prev => ({
+                            ...prev,
+                            cardNumber: formatted,
+                            cardType: brand ? buildCardTypeId(brand, cardProductType) : prev.cardType,
+                          }));
+                          if (cardFormErrors.cardNumber) {
+                            setCardFormErrors(prev => {
+                              const next = { ...prev };
+                              delete next.cardNumber;
+                              return next;
+                            });
+                          }
+                        }}
+                        placeholder="0000 0000 0000 0000"
+                        className={`w-full px-4 py-3 pr-24 border rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base tracking-widest font-mono ${cardFormErrors.cardNumber ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
+                        required
+                      />
+                      {detectCardBrand(cardData.cardNumber) && (
+                        <span
+                          className={`absolute right-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide ${
+                            detectCardBrand(cardData.cardNumber) === 'visa'
+                              ? 'bg-[#1a1f71] text-white'
+                              : 'bg-[#eb001b] text-white'
+                          }`}
+                        >
+                          {detectCardBrand(cardData.cardNumber) === 'visa' ? 'Visa' : 'Mastercard'}
+                        </span>
+                      )}
+                    </div>
+                    {cardFormErrors.cardNumber && (
+                      <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1">
+                        <AlertCircle size={12} /> {cardFormErrors.cardNumber}
+                      </p>
+                    )}
                   </div>
 
                   {/* Nombre en tarjeta */}
@@ -1364,9 +1617,14 @@ const CartDrawer = () => {
                       value={cardData.cardholderName}
                       onChange={e => handleCardFormChange('cardholderName', e.target.value.toUpperCase())}
                       placeholder="NOMBRE COMO APARECE EN LA TARJETA"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base uppercase"
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base uppercase ${cardFormErrors.cardholderName ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                       required
                     />
+                    {cardFormErrors.cardholderName && (
+                      <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1">
+                        <AlertCircle size={12} /> {cardFormErrors.cardholderName}
+                      </p>
+                    )}
                   </div>
 
                   {/* Vencimiento + CVC */}
@@ -1380,9 +1638,12 @@ const CartDrawer = () => {
                         value={cardData.expirationMonth}
                         onChange={e => handleCardFormChange('expirationMonth', e.target.value.replace(/\D/g, '').slice(0, 2))}
                         placeholder="MM"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base text-center"
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base text-center ${cardFormErrors.expirationMonth ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                         required
                       />
+                      {cardFormErrors.expirationMonth && (
+                        <p className="text-[11px] text-red-600 mt-1 leading-tight">{cardFormErrors.expirationMonth}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Año *</label>
@@ -1393,9 +1654,12 @@ const CartDrawer = () => {
                         value={cardData.expirationYear}
                         onChange={e => handleCardFormChange('expirationYear', e.target.value.replace(/\D/g, '').slice(0, 4))}
                         placeholder="AAAA"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base text-center"
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base text-center ${cardFormErrors.expirationYear ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                         required
                       />
+                      {cardFormErrors.expirationYear && (
+                        <p className="text-[11px] text-red-600 mt-1 leading-tight">{cardFormErrors.expirationYear}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">CVC *</label>
@@ -1406,9 +1670,12 @@ const CartDrawer = () => {
                         value={cardData.cvc}
                         onChange={e => handleCardFormChange('cvc', e.target.value.replace(/\D/g, '').slice(0, 4))}
                         placeholder="***"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base text-center"
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base text-center ${cardFormErrors.cvc ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                         required
                       />
+                      {cardFormErrors.cvc && (
+                        <p className="text-[11px] text-red-600 mt-1 leading-tight">{cardFormErrors.cvc}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1425,9 +1692,12 @@ const CartDrawer = () => {
                         value={cardData.payerFirstName}
                         onChange={e => handleCardFormChange('payerFirstName', e.target.value)}
                         placeholder="Juan"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base"
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base ${cardFormErrors.payerFirstName ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                         required
                       />
+                      {cardFormErrors.payerFirstName && (
+                        <p className="text-xs text-red-600 mt-1.5">{cardFormErrors.payerFirstName}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Apellido *</label>
@@ -1436,9 +1706,12 @@ const CartDrawer = () => {
                         value={cardData.payerLastName}
                         onChange={e => handleCardFormChange('payerLastName', e.target.value)}
                         placeholder="Pérez"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base"
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base ${cardFormErrors.payerLastName ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                         required
                       />
+                      {cardFormErrors.payerLastName && (
+                        <p className="text-xs text-red-600 mt-1.5">{cardFormErrors.payerLastName}</p>
+                      )}
                     </div>
                   </div>
 
@@ -1449,9 +1722,14 @@ const CartDrawer = () => {
                       value={cardData.payerEmail}
                       onChange={e => handleCardFormChange('payerEmail', e.target.value)}
                       placeholder="correo@ejemplo.com"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base"
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-[#1A237E] focus:border-transparent text-base ${cardFormErrors.payerEmail ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                       required
                     />
+                    {cardFormErrors.payerEmail && (
+                      <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1">
+                        <AlertCircle size={12} /> {cardFormErrors.payerEmail}
+                      </p>
+                    )}
                   </div>
                 </div>
 
