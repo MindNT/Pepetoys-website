@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus, Minus, Trash2, ShoppingBag, Loader2, MapPin, Store, CreditCard, Download, AlertCircle, CheckCircle2, ChevronLeft, Lock, Banknote, ArrowLeftRight } from 'lucide-react';
-import { useCart } from '../../context/CartContext';
+import { useCart, getCartItemKey } from '../../context/CartContext';
 import ConfirmDialog from './ConfirmDialog';
 import OrderSuccessModal from './OrderSuccessModal';
 import { saveOrder, verifyCustomerPhone, addCustomer, getCategories, processCardPayment, validateDiscountCode } from '../../services/api';
@@ -343,9 +343,14 @@ const CartDrawer = () => {
   const submitOrder = async (phoneDigits, codeOverride = null, fromCardPayment = false) => {
     try {
       // Formatear items: {id: quantity}
+      // NOTA: un mismo producto puede aparecer varias veces con distinto modelo
+      // (Lin Economico). El backend solo acepta {id: cantidad}, así que
+      // agregamos (sumamos) las cantidades por id; el desglose por modelo
+      // viaja en el texto de WhatsApp / maps_url.
       const items = {};
       cartItems.forEach(item => {
-        items[String(item.id)] = item.quantity;
+        const itemId = String(item.id);
+        items[itemId] = (items[itemId] || 0) + item.quantity;
       });
 
       const totalAmount = parseFloat(finalTotal.toFixed(2));
@@ -359,8 +364,8 @@ const CartDrawer = () => {
       const generatedCode = codeOverride || `ORD-${Date.now()}`;
       const generatedCustomerName = customerName || 'Cliente';
 
-      // Construir mensaje de WhatsApp
-      const itemsText = cartItems.map(item => `- ${item.quantity}x ${item.name} ($${(item.priceNumber || 0).toFixed(2)} c/u)`).join('\n');
+      // Construir mensaje de WhatsApp (incluye el modelo para productos Lin Economico)
+      const itemsText = cartItems.map(item => `- ${item.quantity}x ${item.name}${item.modelo ? ` (Modelo ${item.modelo})` : ''} ($${(item.priceNumber || 0).toFixed(2)} c/u)`).join('\n');
       const deliveryText = deliveryOption === 'pickup'
         ? 'PickUp en Tienda'
         : `Envío Exterior\nDirección:\n${addressString ? addressString.replace('Envio Exterior - ', '') : ''}`;
@@ -677,12 +682,15 @@ const CartDrawer = () => {
   };
 
   const handleDeleteClick = (item) => {
-    setConfirmDelete({ id: item.id, name: item.name });
+    setConfirmDelete({
+      key: getCartItemKey(item),
+      name: item.modelo ? `${item.name} (Modelo ${item.modelo})` : item.name
+    });
   };
 
   const handleConfirmDelete = () => {
     if (confirmDelete) {
-      removeFromCart(confirmDelete.id);
+      removeFromCart(confirmDelete.key);
       setConfirmDelete(null);
     }
   };
@@ -738,7 +746,7 @@ const CartDrawer = () => {
             <div className="space-y-3 md:space-y-4">
               {cartItems.map((item) => (
                 <div
-                  key={item.id}
+                  key={getCartItemKey(item)}
                   className="bg-gray-50 rounded-xl p-4 md:p-4 flex gap-3 md:gap-4 shadow-sm hover:shadow-md transition-shadow"
                 >
                   {/* Imagen - Más grande en móvil */}
@@ -757,6 +765,12 @@ const CartDrawer = () => {
                       <h3 className="font-semibold text-base md:text-sm text-gray-800 line-clamp-2 mb-1.5">
                         {item.name}
                       </h3>
+                      {/* Badge de Modelo (Lin Economico) */}
+                      {item.modelo && (
+                        <span className="inline-block mb-1 px-2 py-0.5 bg-[#1A237E]/10 text-[#1A237E] text-xs font-bold rounded-full">
+                          Modelo {item.modelo}
+                        </span>
+                      )}
                       <p className="text-xl md:text-lg font-bold text-[#008F24]">
                         ${(item.priceNumber || 0).toFixed(2)} MXN
                       </p>
@@ -767,7 +781,7 @@ const CartDrawer = () => {
                       {/* Controles de Cantidad - MÁS GRANDES para móvil */}
                       <div className="flex items-center gap-2 md:gap-1.5 bg-white rounded-full px-1.5 py-1.5 md:px-1 md:py-1 shadow-sm border border-gray-200">
                         <button
-                          onClick={() => updateQuantity(item.id, -1)}
+                          onClick={() => updateQuantity(getCartItemKey(item), -1)}
                           disabled={item.quantity <= 1}
                           className={`w-9 h-9 md:w-8 md:h-8 flex items-center justify-center rounded-full transition-colors ${item.quantity <= 1
                             ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -783,7 +797,7 @@ const CartDrawer = () => {
                         </span>
 
                         <button
-                          onClick={() => updateQuantity(item.id, 1)}
+                          onClick={() => updateQuantity(getCartItemKey(item), 1)}
                           className="w-9 h-9 md:w-8 md:h-8 flex items-center justify-center bg-[#008F24] text-white rounded-full hover:bg-[#007520] transition-colors active:scale-95"
                           aria-label="Aumentar cantidad"
                         >
@@ -1448,7 +1462,10 @@ const CartDrawer = () => {
                       <div key={idx} className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <span className="inline-flex items-center justify-center w-6 h-6 bg-[#1A237E]/10 text-[#1A237E] rounded-full text-xs font-bold flex-shrink-0">{item.quantity}</span>
-                          <span className="text-sm text-gray-700 truncate">{item.name}</span>
+                          <span className="text-sm text-gray-700 truncate">
+                            {item.name}
+                            {item.modelo && <span className="font-semibold text-[#1A237E]"> · Modelo {item.modelo}</span>}
+                          </span>
                         </div>
                         <span className="text-sm font-semibold text-gray-800 flex-shrink-0">${((item.priceNumber || 0) * item.quantity).toFixed(2)}</span>
                       </div>

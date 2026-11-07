@@ -10,6 +10,7 @@ import { useCart } from '../../context/CartContext';
 import formatGoogleDriveUrl from '../../utils/formatGoogleDriveUrl';
 import ProductCard from '../common/ProductCard';
 import HeroJungleSection from '../sections/HeroJungleSection';
+import { getLinEconomicoCategoryIds, isLinEconomicoProduct } from '../../utils/linEconomico';
 
 const CategoryPage = () => {
     const { id } = useParams();
@@ -21,6 +22,7 @@ const CategoryPage = () => {
     const [error, setError] = useState(null);
     const [categories, setCategories] = useState([]);
     const [categoryName, setCategoryName] = useState('');
+    const [linEconomicoIds, setLinEconomicoIds] = useState([]);
     const { addToCart, openCart } = useCart();
     const [addedProductId, setAddedProductId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -45,7 +47,10 @@ const CategoryPage = () => {
                             name: cat.name
                         }));
                     setCategories(activeCategories);
-                    
+
+                    // Detectar IDs de la categoría "Lin Economico" (como sea que esté escrita)
+                    setLinEconomicoIds(getLinEconomicoCategoryIds(response.data));
+
                     // Set current category name
                     const currentCategory = activeCategories.find(cat => cat.id === Number(id));
                     setCategoryName(currentCategory ? currentCategory.name : `Categoría ${id}`);
@@ -139,6 +144,12 @@ const CategoryPage = () => {
 
     const handleQuickAddToCart = (product, event) => {
         event.stopPropagation();
+        // Los productos Lin Economico requieren elegir modelo:
+        // el botón + abre el modal de detalles en lugar de agregar directo
+        if (isLinEconomicoProduct(product, linEconomicoIds)) {
+            handleOpenModal(product);
+            return;
+        }
         addToCart(product, 1);
         // Feedback visual
         setAddedProductId(product.id);
@@ -294,6 +305,7 @@ const CategoryPage = () => {
                 onClose={handleCloseModal}
                 product={selectedProduct}
                 loading={modalLoading}
+                isLinEconomico={isLinEconomicoProduct(selectedProduct, linEconomicoIds)}
             />
         </div>
     );

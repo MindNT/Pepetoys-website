@@ -99,7 +99,14 @@ const OrderSuccessModal = ({ isOpen, onClose, orderData }) => {
                                         <div key={index} className="flex justify-between items-center text-sm">
                                             <div className="flex items-center gap-2 flex-1 min-w-0">
                                                 <span className="inline-flex items-center justify-center w-5 h-5 bg-[#1A237E]/10 text-[#1A237E] rounded-full text-xs font-bold flex-shrink-0">{item.quantity}</span>
-                                                <p className="font-medium text-gray-700 truncate">{item.name}</p>
+                                                <p className="font-medium text-gray-700 truncate">
+                                                    {item.name}
+                                                    {item.modelo && (
+                                                        <span className="ml-1.5 px-1.5 py-0.5 bg-[#1A237E]/10 text-[#1A237E] text-[10px] font-bold rounded-full align-middle">
+                                                            Modelo {item.modelo}
+                                                        </span>
+                                                    )}
+                                                </p>
                                             </div>
                                             <p className="font-semibold text-gray-800 flex-shrink-0 ml-2">
                                                 ${(item.priceNumber * item.quantity).toFixed(2)}

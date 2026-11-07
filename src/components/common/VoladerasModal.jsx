@@ -5,6 +5,7 @@ import ProductCard from './ProductCard';
 import ProductModal from './ProductModal';
 import { useCart } from '../../context/CartContext';
 import formatGoogleDriveUrl from '../../utils/formatGoogleDriveUrl';
+import { getLinEconomicoCategoryIds, isLinEconomicoProduct } from '../../utils/linEconomico';
 
 const VoladerasModal = ({ isOpen, onClose }) => {
     const [products, setProducts] = useState([]);
@@ -18,6 +19,7 @@ const VoladerasModal = ({ isOpen, onClose }) => {
     
     const { addToCart } = useCart();
     const [addedProductId, setAddedProductId] = useState(null);
+    const [linEconomicoIds, setLinEconomicoIds] = useState([]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -32,6 +34,9 @@ const VoladerasModal = ({ isOpen, onClose }) => {
                     voladerasIds = catsResponse.data
                         .filter(cat => cat.name.toLowerCase().includes('voladera'))
                         .map(cat => cat.id);
+
+                    // Detectar IDs de la categoría "Lin Economico" (como sea que esté escrita)
+                    setLinEconomicoIds(getLinEconomicoCategoryIds(catsResponse.data));
                 }
 
                 // 2. Fetch all products and filter by these IDs
@@ -102,6 +107,12 @@ const VoladerasModal = ({ isOpen, onClose }) => {
 
     const handleQuickAddToCart = (product, event) => {
         event.stopPropagation();
+        // Los productos Lin Economico requieren elegir modelo:
+        // el botón + abre el modal de detalles en lugar de agregar directo
+        if (isLinEconomicoProduct(product, linEconomicoIds)) {
+            handleOpenProductModal(product);
+            return;
+        }
         addToCart(product, 1);
         setAddedProductId(product.id);
         setTimeout(() => setAddedProductId(null), 1500);
@@ -164,6 +175,7 @@ const VoladerasModal = ({ isOpen, onClose }) => {
                 onClose={handleCloseProductModal}
                 product={selectedProduct}
                 loading={modalLoading}
+                isLinEconomico={isLinEconomicoProduct(selectedProduct, linEconomicoIds)}
             />
         </div>
     );

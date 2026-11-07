@@ -1,20 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, ShoppingCart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Plus, Minus, ShoppingCart, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import Button from './Button';
 import { useCart } from '../../context/CartContext';
 import formatGoogleDriveUrl from '../../utils/formatGoogleDriveUrl';
+import { LIN_MODELOS } from '../../utils/linEconomico';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
-const ProductModal = ({ isOpen, onClose, product, loading }) => {
+const ProductModal = ({ isOpen, onClose, product, loading, isLinEconomico = false }) => {
     const [quantity, setQuantity] = useState(1);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+    const [selectedModelo, setSelectedModelo] = useState(LIN_MODELOS[0]);
     const { addToCart, openCart } = useCart();
 
     // Reset state when product changes
     useEffect(() => {
         setQuantity(1);
         setSelectedImageIndex(0);
+        setSelectedModelo(LIN_MODELOS[0]);
     }, [product?.id, isOpen]);
 
     if (!isOpen) return null;
@@ -190,6 +193,37 @@ const ProductModal = ({ isOpen, onClose, product, loading }) => {
                         </p>
                     </div>
 
+                    {/* Model Selector — solo para productos Lin Economico */}
+                    {isLinEconomico && (
+                        <div className="mb-6">
+                            <h3 className="text-sm md:text-[12px] font-bold text-black mb-2 text-center md:text-left">
+                                Modelo <span className="text-[#A41262]">*</span>
+                            </h3>
+                            <div className="relative w-full md:w-[244px] mx-auto md:mx-0">
+                                <select
+                                    value={selectedModelo}
+                                    onChange={(e) => setSelectedModelo(e.target.value)}
+                                    className="w-full h-[46px] md:h-[40px] pl-4 pr-10 appearance-none bg-white border-2 border-[#008F24]/50 rounded-xl md:rounded-[10px] font-bold text-[15px] text-black focus:outline-none focus:ring-2 focus:ring-[#008F24]/40 focus:border-[#008F24] cursor-pointer shadow-sm"
+                                    aria-label="Selecciona el modelo"
+                                >
+                                    {LIN_MODELOS.map((num) => (
+                                        <option key={num} value={num}>
+                                            Modelo {num}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown
+                                    size={18}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#008F24] pointer-events-none"
+                                    strokeWidth={2.5}
+                                />
+                            </div>
+                            <p className="text-[12px] text-gray-500 mt-2 text-center md:text-left">
+                                Elige el modelo (1-6) que deseas de este producto.
+                            </p>
+                        </div>
+                    )}
+
                     {/* Bottom Grid: Price (left) | Quantity (right) */}
                     <div className="grid grid-cols-2 gap-6 mb-8 items-center">
 
@@ -227,7 +261,7 @@ const ProductModal = ({ isOpen, onClose, product, loading }) => {
                         <button
                             onClick={(e) => {
                                 if (product) {
-                                    addToCart(product, quantity);
+                                    addToCart(product, quantity, isLinEconomico ? selectedModelo : null);
                                     // Mostrar feedback visual breve
                                     const button = e.currentTarget;
                                     const originalText = button.innerHTML;

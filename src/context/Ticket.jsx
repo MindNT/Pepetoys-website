@@ -86,7 +86,14 @@ const Ticket = () => {
                   <div key={index} className="flex justify-between items-start text-sm">
                     <div className="flex-1 pr-4">
                       <p className="font-semibold text-gray-800">{item.name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Cantidad: {item.quantity}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Cantidad: {item.quantity}
+                        {item.modelo && (
+                          <span className="ml-2 inline-block px-1.5 py-0.5 bg-[#1A237E]/10 text-[#1A237E] text-[10px] font-bold rounded-full align-middle">
+                            Modelo {item.modelo}
+                          </span>
+                        )}
+                      </p>
                     </div>
                     <p className="font-bold text-gray-900 whitespace-nowrap">
                       ${(item.priceNumber * item.quantity).toFixed(2)} MXN

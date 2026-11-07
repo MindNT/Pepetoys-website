@@ -2,6 +2,17 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const CartContext = createContext();
 
+/**
+ * Genera la clave única de un item del carrito.
+ * Los productos con modelo (Lin Economico) se distinguen por id + modelo,
+ * de modo que el mismo producto con modelos distintos son líneas separadas.
+ */
+export const getCartItemKey = (item) => {
+  if (!item) return '';
+  const modelo = item.modelo ?? null;
+  return modelo ? `${item.id}-M${modelo}` : String(item.id);
+};
+
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
@@ -46,43 +57,47 @@ export const CartProvider = ({ children }) => {
   };
 
   // Agregar producto al carrito
-  const addToCart = (product, quantity = 1) => {
+  // modelo: opcional, para productos Lin Economico ('1'-'6')
+  const addToCart = (product, quantity = 1, modelo = null) => {
     setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === product.id);
-      
+      const itemKey = getCartItemKey({ id: product.id, modelo });
+      const existingItem = prevItems.find(item => getCartItemKey(item) === itemKey);
+      const modeloLabel = modelo ? ` (Modelo ${modelo})` : '';
+
       if (existingItem) {
-        // Si existe, incrementar cantidad
-        showToast(`${product.name} (x${quantity}) agregado al carrito`);
+        // Si existe (mismo id + mismo modelo), incrementar cantidad
+        showToast(`${product.name}${modeloLabel} (x${quantity}) agregado al carrito`);
         return prevItems.map(item =>
-          item.id === product.id
+          getCartItemKey(item) === itemKey
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       } else {
         // Si no existe, agregar nuevo
-        showToast(`${product.name} agregado al carrito`);
-        return [...prevItems, { 
-          ...product, 
+        showToast(`${product.name}${modeloLabel} agregado al carrito`);
+        return [...prevItems, {
+          ...product,
           quantity,
+          modelo: modelo ?? null,
           // Asegurar que tenemos el precio como número
-          priceNumber: typeof product.price === 'number' 
-            ? product.price 
+          priceNumber: typeof product.price === 'number'
+            ? product.price
             : parseFloat(product.price?.toString().replace(/[^0-9.-]+/g, '') || 0)
         }];
       }
     });
   };
 
-  // Eliminar producto del carrito
-  const removeFromCart = (productId) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
+  // Eliminar producto del carrito (por clave única id+modelo)
+  const removeFromCart = (itemKey) => {
+    setCartItems(prevItems => prevItems.filter(item => getCartItemKey(item) !== String(itemKey)));
   };
 
-  // Actualizar cantidad de un producto
-  const updateQuantity = (productId, amount) => {
+  // Actualizar cantidad de un producto (por clave única id+modelo)
+  const updateQuantity = (itemKey, amount) => {
     setCartItems(prevItems => {
       return prevItems.map(item => {
-        if (item.id === productId) {
+        if (getCartItemKey(item) === String(itemKey)) {
           const newQuantity = item.quantity + amount;
           // No permitir cantidades menores a 1
           if (newQuantity < 1) {
