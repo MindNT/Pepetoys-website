@@ -14,9 +14,6 @@ const GLOBAL_DISCOUNT_RATE = 0.0;
 const RESTRICTED_ITEMS = [123, 122, 124];
 const EXCLUSIVE_CATEGORY = 23;
 const NO_DISCOUNT_CATEGORY = 24;
-// Categorías PROHIBIDAS para códigos de descuento (su precio ya viene con descuento):
-// 24 = categoría sin descuento existente, 38 = Navideños
-const NO_DISCOUNT_CATEGORIES = [NO_DISCOUNT_CATEGORY, 38];
 
 // Detecta la marca de la tarjeta por su número (BIN).
 // Visa empieza con 4; Mastercard con 51-55 o 2221-2720.
@@ -240,11 +237,9 @@ const CartDrawer = () => {
   const currentDiscountRate = appliedDiscount ? appliedDiscount.percentage : GLOBAL_DISCOUNT_RATE;
   
   const discountableTotal = checkoutItems.reduce((total, item) => {
-    // Los artículos de categorías prohibidas (24, 38/Navideños) nunca reciben
-    // descuento: su precio ya viene con descuento y se respeta tal cual.
     const hasNoDiscountCategory = Array.isArray(item.category_ids) 
-      ? item.category_ids.some(id => NO_DISCOUNT_CATEGORIES.includes(Number(id)))
-      : NO_DISCOUNT_CATEGORIES.includes(Number(item.category_id));
+      ? item.category_ids.some(id => Number(id) === NO_DISCOUNT_CATEGORY)
+      : Number(item.category_id) === NO_DISCOUNT_CATEGORY;
       
     if (hasNoDiscountCategory) {
       return total;

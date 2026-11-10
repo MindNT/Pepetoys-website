@@ -151,6 +151,11 @@ const CategoryPage = () => {
 
     const handleQuickAddToCart = (product, event) => {
         event.stopPropagation();
+        // La Caja navideña NO se agrega al carrito: se paga directo desde su modal
+        if (isCajaNavidena(product)) {
+            handleOpenModal(product);
+            return;
+        }
         // Los productos Lin Economico requieren elegir modelo:
         // el botón + abre el modal de detalles en lugar de agregar directo
         if (isLinEconomicoProduct(product, linEconomicoIds)) {
