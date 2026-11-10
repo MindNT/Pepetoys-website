@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Gift, CreditCard, Snowflake, Sparkles, TreePine } from 'lucide-react';
+import { Gift, ShoppingCart, Snowflake, Sparkles, TreePine } from 'lucide-react';
 import { getItems, getItemData } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import formatGoogleDriveUrl from '../../utils/formatGoogleDriveUrl';
@@ -35,7 +35,7 @@ const ChristmasBoxBanner = () => {
     const [product, setProduct] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalLoading, setModalLoading] = useState(false);
-    const { startDirectBuy } = useCart();
+    const { addToCart } = useCart();
 
     // Buscar el artículo "Caja navideña" en el API
     useEffect(() => {
@@ -163,11 +163,11 @@ const ChristmasBoxBanner = () => {
                             Ver detalles
                         </button>
                         <button
-                            onClick={() => startDirectBuy(product, 1)}
+                            onClick={() => addToCart(product, 1)}
                             className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-[15px] md:text-[16px] px-7 py-3 rounded-full border-2 border-white/50 transition-all duration-200 hover:scale-105"
                         >
-                            <CreditCard size={19} />
-                            Comprar ahora
+                            <ShoppingCart size={19} />
+                            Agregar
                         </button>
                     </div>
                 </div>

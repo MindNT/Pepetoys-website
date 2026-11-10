@@ -15,7 +15,7 @@ const BASE_URL = import.meta.env.BASE_URL;
 const ProductModalBox = ({ isOpen, onClose, product, loading }) => {
     const [quantity, setQuantity] = useState(1);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-    const { startDirectBuy } = useCart();
+    const { addToCart } = useCart();
 
     // Reset state when product changes
     useEffect(() => {
@@ -248,21 +248,32 @@ const ProductModalBox = ({ isOpen, onClose, product, loading }) => {
                         </div>
                     </div>
 
-                    {/* Footer Button - Centered (pago directo, sin carrito) */}
+                    {/* Footer Button - Centered */}
                     <div className="mt-auto flex justify-center">
                         <button
-                            onClick={() => {
+                            onClick={(e) => {
                                 if (product) {
-                                    // La Caja navideña se paga directamente: abre el flujo
-                                    // de cobro (teléfono → entrega → pago) sin pasar por el carrito
-                                    startDirectBuy(product, quantity);
-                                    onClose();
+                                    addToCart(product, quantity);
+                                    // Mostrar feedback visual breve
+                                    const button = e.currentTarget;
+                                    const originalText = button.innerHTML;
+                                    button.innerHTML = '<svg class="w-5 h-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg> ¡Agregado!';
+                                    button.disabled = true;
+                                    button.classList.add('scale-95');
+
+                                    setTimeout(() => {
+                                        button.innerHTML = originalText;
+                                        button.disabled = false;
+                                        button.classList.remove('scale-95');
+                                        // Cerrar modal SOLAMENTE (sin abrir carrito)
+                                        onClose();
+                                    }, 800);
                                 }
                             }}
                             className="w-full md:w-[264px] h-16 md:h-[52px] bg-[#166534] hover:bg-[#14532d] disabled:bg-[#166534] disabled:opacity-75 text-white font-bold text-lg md:text-[16px] rounded-xl md:rounded-[10px] border-2 border-[#FFD700]/70 shadow-[0_0_18px_rgba(255,215,0,0.35)] flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
                         >
                             <Gift size={20} />
-                            Comprar ahora
+                            Agregar al Carrito
                         </button>
                     </div>
 

@@ -4,6 +4,7 @@ import { useCart, getCartItemKey } from '../../context/CartContext';
 import ConfirmDialog from './ConfirmDialog';
 import OrderSuccessModal from './OrderSuccessModal';
 import { saveOrder, verifyCustomerPhone, addCustomer, getCategories, processCardPayment, validateDiscountCode } from '../../services/api';
+import { isCajaNavidena } from '../../utils/navidad';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -237,6 +238,12 @@ const CartDrawer = () => {
   const currentDiscountRate = appliedDiscount ? appliedDiscount.percentage : GLOBAL_DISCOUNT_RATE;
   
   const discountableTotal = checkoutItems.reduce((total, item) => {
+    // La Caja navideña NUNCA recibe descuentos (ni códigos ni globales):
+    // su precio ya viene con descuento y se respeta tal cual.
+    // Al resto de artículos navideños SÍ se les aplica el descuento.
+    if (isCajaNavidena(item)) {
+      return total;
+    }
     const hasNoDiscountCategory = Array.isArray(item.category_ids) 
       ? item.category_ids.some(id => Number(id) === NO_DISCOUNT_CATEGORY)
       : Number(item.category_id) === NO_DISCOUNT_CATEGORY;
