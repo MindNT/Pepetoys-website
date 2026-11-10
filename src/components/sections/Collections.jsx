@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import CollectionCard from '../common/CollectionCard';
+import CollectionCardNavidenos from '../common/CollectionCardNavidenos';
 import BirdSpeechSection from './BirdSpeechSection';
 import { getCategories } from '../../services/api';
 import formatGoogleDriveUrl from '../../utils/formatGoogleDriveUrl';
+import { isNavidenosCategoryName } from '../../utils/navidad';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -39,6 +41,12 @@ const Collections = () => {
                 image: formattedImageUrl
               };
             });
+          // La categoría Navideños aparece de primero que las demás
+          activeCategories.sort((a, b) => {
+            const aNav = isNavidenosCategoryName(a.name) ? 0 : 1;
+            const bNav = isNavidenosCategoryName(b.name) ? 0 : 1;
+            return aNav - bNav;
+          });
           setCategories(activeCategories);
         } else {
           // Si no hay respuesta válida, usar categorías por defecto
@@ -82,11 +90,19 @@ const Collections = () => {
               {categories.map((collection) => (
                 <div key={collection.id} className="flex justify-center w-full">
                   <Link to={`/category/${collection.id}`} className="w-full">
-                    <CollectionCard
-                      name={collection.name}
-                      image={collection.image}
-                      mobile={true}
-                    />
+                    {isNavidenosCategoryName(collection.name) ? (
+                      <CollectionCardNavidenos
+                        name={collection.name}
+                        image={collection.image}
+                        mobile={true}
+                      />
+                    ) : (
+                      <CollectionCard
+                        name={collection.name}
+                        image={collection.image}
+                        mobile={true}
+                      />
+                    )}
                   </Link>
                 </div>
               ))}

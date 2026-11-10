@@ -25,6 +25,9 @@ export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  // Compra directa: artículo que se paga de inmediato SIN pasar por el carrito
+  // (ej. la "Caja navideña"). Mientras exista, el flujo de cobro usa solo este artículo.
+  const [directBuyItem, setDirectBuyItem] = useState(null);
 
   // Cargar carrito desde localStorage al montar
   useEffect(() => {
@@ -115,6 +118,24 @@ export const CartProvider = ({ children }) => {
     setCartItems([]);
   };
 
+  // Iniciar compra directa (pagar de inmediato, sin agregar al carrito)
+  const startDirectBuy = (product, quantity = 1) => {
+    setDirectBuyItem({
+      ...product,
+      quantity,
+      modelo: null,
+      // Asegurar que tenemos el precio como número (igual que en addToCart)
+      priceNumber: typeof product.price === 'number'
+        ? product.price
+        : parseFloat(product.price?.toString().replace(/[^0-9.-]+/g, '') || 0)
+    });
+  };
+
+  // Cancelar/limpiar la compra directa
+  const cancelDirectBuy = () => {
+    setDirectBuyItem(null);
+  };
+
   // Obtener cantidad total de items
   const getTotalItems = () => {
     return cartItems.reduce((total, item) => total + item.quantity, 0);
@@ -137,10 +158,13 @@ export const CartProvider = ({ children }) => {
     cartItems,
     isCartOpen,
     toast,
+    directBuyItem,
     addToCart,
     removeFromCart,
     updateQuantity,
     clearCart,
+    startDirectBuy,
+    cancelDirectBuy,
     getTotalItems,
     getTotalPrice,
     openCart,

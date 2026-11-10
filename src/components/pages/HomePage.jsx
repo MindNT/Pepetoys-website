@@ -4,12 +4,16 @@ import Footer from '../layout/Footer';
 import CategoryBanner from '../sections/CategoryBanner';
 import Collections from '../sections/Collections';
 import HeroJungleSection from '../sections/HeroJungleSection';
+import ChristmasBoxBanner from '../sections/ChristmasBoxBanner';
 
 const HomePage = () => {
     return (
         <div className="min-h-screen bg-white">
             {/* Banner superior con imágenes en diagonal */}
             <CategoryBanner />
+            
+            {/* Banner navideño: Caja navideña (artículo filtrado por ID, ver src/utils/navidad.js) */}
+            <ChristmasBoxBanner />
             
             {/* Header con logo, loro y botones */}
             <Header />

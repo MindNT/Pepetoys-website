@@ -14,6 +14,9 @@ const GLOBAL_DISCOUNT_RATE = 0.0;
 const RESTRICTED_ITEMS = [123, 122, 124];
 const EXCLUSIVE_CATEGORY = 23;
 const NO_DISCOUNT_CATEGORY = 24;
+// Categorías PROHIBIDAS para códigos de descuento (su precio ya viene con descuento):
+// 24 = categoría sin descuento existente, 38 = Navideños
+const NO_DISCOUNT_CATEGORIES = [NO_DISCOUNT_CATEGORY, 38];
 
 // Detecta la marca de la tarjeta por su número (BIN).
 // Visa empieza con 4; Mastercard con 51-55 o 2221-2720.
@@ -102,12 +105,18 @@ const CartDrawer = () => {
     isCartOpen,
     closeCart,
     cartItems,
+    directBuyItem,
     updateQuantity,
     removeFromCart,
     getTotalItems,
     getTotalPrice,
-    clearCart
+    clearCart,
+    cancelDirectBuy
   } = useCart();
+
+  // Compra directa: si hay un directBuyItem, el flujo de cobro usa SOLO ese
+  // artículo (sin tocar el carrito). Si no, funciona como siempre con cartItems.
+  const checkoutItems = directBuyItem ? [directBuyItem] : cartItems;
 
   const [confirmDelete, setConfirmDelete] = useState(null); // { id, name }
   const [showPhoneDialog, setShowPhoneDialog] = useState(false);
@@ -217,14 +226,25 @@ const CartDrawer = () => {
     }
   }, [isCartOpen]);
 
+  // Compra directa: al establecerse un directBuyItem, abrir el flujo de cobro
+  // (diálogo de teléfono) de inmediato, sin abrir el carrito
+  useEffect(() => {
+    if (directBuyItem) {
+      setShowPhoneDialog(true);
+    }
+  }, [directBuyItem]);
+
   // --- Cálculos de Totales ---
-  const itemsTotal = getTotalPrice(); // Total antes de promociones
+  // En compra directa se calcula sobre checkoutItems (equivale a getTotalPrice en modo carrito)
+  const itemsTotal = checkoutItems.reduce((total, item) => total + ((item.priceNumber || 0) * item.quantity), 0); // Total antes de promociones
   const currentDiscountRate = appliedDiscount ? appliedDiscount.percentage : GLOBAL_DISCOUNT_RATE;
   
-  const discountableTotal = cartItems.reduce((total, item) => {
+  const discountableTotal = checkoutItems.reduce((total, item) => {
+    // Los artículos de categorías prohibidas (24, 38/Navideños) nunca reciben
+    // descuento: su precio ya viene con descuento y se respeta tal cual.
     const hasNoDiscountCategory = Array.isArray(item.category_ids) 
-      ? item.category_ids.some(id => Number(id) === NO_DISCOUNT_CATEGORY)
-      : Number(item.category_id) === NO_DISCOUNT_CATEGORY;
+      ? item.category_ids.some(id => NO_DISCOUNT_CATEGORIES.includes(Number(id)))
+      : NO_DISCOUNT_CATEGORIES.includes(Number(item.category_id));
       
     if (hasNoDiscountCategory) {
       return total;
@@ -235,8 +255,8 @@ const CartDrawer = () => {
   const discountAmount = discountableTotal * currentDiscountRate;
   const netItemsTotal = itemsTotal - discountAmount;
 
-  const hasRestrictedItem = cartItems.some(item => RESTRICTED_ITEMS.includes(Number(item.id)));
-  const hasExclusiveCategory = cartItems.some(item => {
+  const hasRestrictedItem = checkoutItems.some(item => RESTRICTED_ITEMS.includes(Number(item.id)));
+  const hasExclusiveCategory = checkoutItems.some(item => {
     // Revisar si algún ID de las categorías dinámicas (o el 23) coincide
     if (Array.isArray(item.category_ids)) {
       return item.category_ids.some(id => voladerasIds.includes(Number(id)));
@@ -348,7 +368,7 @@ const CartDrawer = () => {
       // agregamos (sumamos) las cantidades por id; el desglose por modelo
       // viaja en el texto de WhatsApp / maps_url.
       const items = {};
-      cartItems.forEach(item => {
+      checkoutItems.forEach(item => {
         const itemId = String(item.id);
         items[itemId] = (items[itemId] || 0) + item.quantity;
       });
@@ -365,7 +385,7 @@ const CartDrawer = () => {
       const generatedCustomerName = customerName || 'Cliente';
 
       // Construir mensaje de WhatsApp (incluye el modelo para productos Lin Economico)
-      const itemsText = cartItems.map(item => `- ${item.quantity}x ${item.name}${item.modelo ? ` (Modelo ${item.modelo})` : ''} ($${(item.priceNumber || 0).toFixed(2)} c/u)`).join('\n');
+      const itemsText = checkoutItems.map(item => `- ${item.quantity}x ${item.name}${item.modelo ? ` (Modelo ${item.modelo})` : ''} ($${(item.priceNumber || 0).toFixed(2)} c/u)`).join('\n');
       const deliveryText = deliveryOption === 'pickup'
         ? 'PickUp en Tienda'
         : `Envío Exterior\nDirección:\n${addressString ? addressString.replace('Envio Exterior - ', '') : ''}`;
@@ -373,7 +393,7 @@ const CartDrawer = () => {
       const waCurrentDiscountRate = appliedDiscount ? appliedDiscount.percentage : GLOBAL_DISCOUNT_RATE;
       const discountText = appliedDiscount ? ` (Código: ${appliedDiscount.code})` : '';
 
-      const waMessage = `¡Hola! Acabo de realizar un pedido.\n\n*Código de Pedido:* ${generatedCode}\n*Cliente:* ${generatedCustomerName}\n*Teléfono:* ${phoneDigits}\n*Entrega:* ${deliveryText}\n*Método de Pago:* ${paymentMethod}\n\n*Resumen del Pedido:*\n${itemsText}${waCurrentDiscountRate > 0 ? `\n\n*Subtotal Artículos:* $${itemsTotal.toFixed(2)}\n*Descuento (${(waCurrentDiscountRate * 100).toFixed(0)}%)${discountText}:* -$${discountAmount.toFixed(2)}` : ''}${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'Pendiente' : `$${shippingCost.toFixed(2)}`}` : ''}\n\n*Total a Pagar:* $${finalTotal.toFixed(2)} MXN${isShippingPending ? ' (Envío pendiente de cotización)' : ''}`;
+      const waMessage = `¡Hola! Acabo de realizar un pedido.\n\n*Código de Pedido:* ${generatedCode}\n*Cliente:* ${generatedCustomerName}\n*Teléfono:* ${phoneDigits}\n*Entrega:* ${deliveryText}\n*Método de Pago:* ${paymentMethod}\n\n*Resumen del Pedido:*\n${itemsText}${discountAmount > 0 ? `\n\n*Subtotal Artículos:* $${itemsTotal.toFixed(2)}\n*Descuento (${(waCurrentDiscountRate * 100).toFixed(0)}%)${discountText}:* -$${discountAmount.toFixed(2)}` : ''}${deliveryOption === 'exterior' ? `\n*Costo de Envío:* ${isShippingPending ? 'Pendiente' : `$${shippingCost.toFixed(2)}`}` : ''}\n\n*Total a Pagar:* $${finalTotal.toFixed(2)} MXN${isShippingPending ? ' (Envío pendiente de cotización)' : ''}`;
 
       const orderData = {
         phone: phoneDigits,
@@ -396,7 +416,12 @@ const CartDrawer = () => {
         setShowDeliveryDialog(false);
         setShowCardFlow(false);
         closeCart();
-        clearCart();
+        // En compra directa NO se toca el carrito; solo se limpia el directBuyItem
+        if (directBuyItem) {
+          cancelDirectBuy();
+        } else {
+          clearCart();
+        }
 
         setWaCheckoutUrl(waUrl);
 
@@ -405,7 +430,7 @@ const CartDrawer = () => {
           orderCode: generatedCode,
           customerName: generatedCustomerName,
           phone: phoneDigits,
-          items: cartItems,
+          items: checkoutItems,
           totalAmount: finalTotal,
           waUrl: waUrl,
           paidByCard: fromCardPayment,
@@ -628,6 +653,8 @@ const CartDrawer = () => {
     setCardFlowStep('detail');
     setCardError(null);
     setCardFormErrors({});
+    // Si era una compra directa, cancelar todo el flujo
+    if (directBuyItem) cancelDirectBuy();
     setCardProductType('credit');
     setCardData({
       cardNumber: '',
@@ -647,6 +674,8 @@ const CartDrawer = () => {
     setPhone('');
     setPhoneError('');
     setIsVerifying(false);
+    // Si era una compra directa, cancelar todo el flujo
+    if (directBuyItem) cancelDirectBuy();
   };
 
   const handleNameCancel = () => {
@@ -861,7 +890,7 @@ const CartDrawer = () => {
             </div>
 
             {/* Discount (if applicable) */}
-            {currentDiscountRate > 0 && (
+            {discountAmount > 0 && (
               <div className="flex items-center justify-between mb-2 text-green-600">
                 <span className="text-base md:text-sm">Descuento ({(currentDiscountRate * 100).toFixed(0)}%):</span>
                 <span className="text-xl md:text-lg font-semibold">
@@ -1458,7 +1487,7 @@ const CartDrawer = () => {
                   <h4 className="text-lg font-bold text-[#1A237E] mb-4 pb-3 border-b border-gray-100">Resumen de tu Pedido</h4>
 
                   <div className="space-y-3 mb-5">
-                    {cartItems.map((item, idx) => (
+                    {checkoutItems.map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <span className="inline-flex items-center justify-center w-6 h-6 bg-[#1A237E]/10 text-[#1A237E] rounded-full text-xs font-bold flex-shrink-0">{item.quantity}</span>
@@ -1477,7 +1506,7 @@ const CartDrawer = () => {
                       <span>Subtotal artículos:</span>
                       <span>${itemsTotal.toFixed(2)}</span>
                     </div>
-                    {currentDiscountRate > 0 && (
+                    {discountAmount > 0 && (
                       <div className="flex justify-between text-sm text-green-600 font-medium">
                         <span>Descuento ({(currentDiscountRate * 100).toFixed(0)}%):</span>
                         <span>-${discountAmount.toFixed(2)}</span>

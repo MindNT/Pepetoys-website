@@ -9,8 +9,11 @@ import { ShoppingCart, Plus, Search } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import formatGoogleDriveUrl from '../../utils/formatGoogleDriveUrl';
 import ProductCard from '../common/ProductCard';
+import ProductCardNavidenos from '../common/ProductCardNavidenos';
+import ProductModalBox from '../common/ProductModalBox';
 import HeroJungleSection from '../sections/HeroJungleSection';
 import { getLinEconomicoCategoryIds, isLinEconomicoProduct } from '../../utils/linEconomico';
+import { getNavidenosCategoryIds, isNavidenosProduct, isCajaNavidena } from '../../utils/navidad';
 
 const CategoryPage = () => {
     const { id } = useParams();
@@ -23,6 +26,7 @@ const CategoryPage = () => {
     const [categories, setCategories] = useState([]);
     const [categoryName, setCategoryName] = useState('');
     const [linEconomicoIds, setLinEconomicoIds] = useState([]);
+    const [navidenosIds, setNavidenosIds] = useState([]);
     const { addToCart, openCart } = useCart();
     const [addedProductId, setAddedProductId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +54,9 @@ const CategoryPage = () => {
 
                     // Detectar IDs de la categoría "Lin Economico" (como sea que esté escrita)
                     setLinEconomicoIds(getLinEconomicoCategoryIds(response.data));
+
+                    // Detectar IDs de la categoría "Navideños"
+                    setNavidenosIds(getNavidenosCategoryIds(response.data));
 
                     // Set current category name
                     const currentCategory = activeCategories.find(cat => cat.id === Number(id));
@@ -161,9 +168,20 @@ const CategoryPage = () => {
         p.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
+    // Los artículos Navideños van primero; la "Caja navideña" va de primero de todos
+    const sortedProducts = [...filteredProducts].sort((a, b) => {
+        const aCaja = isCajaNavidena(a) ? 0 : 1;
+        const bCaja = isCajaNavidena(b) ? 0 : 1;
+        if (aCaja !== bCaja) return aCaja - bCaja;
+        const aNav = isNavidenosProduct(a, navidenosIds) ? 0 : 1;
+        const bNav = isNavidenosProduct(b, navidenosIds) ? 0 : 1;
+        if (aNav !== bNav) return aNav - bNav;
+        return a.name.localeCompare(b.name);
+    });
 
-    const paginatedProducts = filteredProducts.slice(
+    const totalPages = Math.max(1, Math.ceil(sortedProducts.length / itemsPerPage));
+
+    const paginatedProducts = sortedProducts.slice(
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
     );
@@ -282,12 +300,21 @@ const CategoryPage = () => {
                             ) : (
                                 paginatedProducts.map((product) => (
                                     <div key={product.id} className="h-full">
-                                        <ProductCard
-                                            product={product}
-                                            onOpenModal={handleOpenModal}
-                                            onQuickAdd={handleQuickAddToCart}
-                                            isAdded={addedProductId === product.id}
-                                        />
+                                        {isNavidenosProduct(product, navidenosIds) ? (
+                                            <ProductCardNavidenos
+                                                product={product}
+                                                onOpenModal={handleOpenModal}
+                                                onQuickAdd={handleQuickAddToCart}
+                                                isAdded={addedProductId === product.id}
+                                            />
+                                        ) : (
+                                            <ProductCard
+                                                product={product}
+                                                onOpenModal={handleOpenModal}
+                                                onQuickAdd={handleQuickAddToCart}
+                                                isAdded={addedProductId === product.id}
+                                            />
+                                        )}
                                     </div>
                                 ))
                             )}
@@ -300,13 +327,22 @@ const CategoryPage = () => {
 
             <Footer />
 
-            <ProductModal
-                isOpen={isModalOpen}
-                onClose={handleCloseModal}
-                product={selectedProduct}
-                loading={modalLoading}
-                isLinEconomico={isLinEconomicoProduct(selectedProduct, linEconomicoIds)}
-            />
+            {isNavidenosProduct(selectedProduct, navidenosIds) ? (
+                <ProductModalBox
+                    isOpen={isModalOpen}
+                    onClose={handleCloseModal}
+                    product={selectedProduct}
+                    loading={modalLoading}
+                />
+            ) : (
+                <ProductModal
+                    isOpen={isModalOpen}
+                    onClose={handleCloseModal}
+                    product={selectedProduct}
+                    loading={modalLoading}
+                    isLinEconomico={isLinEconomicoProduct(selectedProduct, linEconomicoIds)}
+                />
+            )}
         </div>
     );
 };
