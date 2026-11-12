@@ -9,7 +9,7 @@ import { isCajaNavidena } from '../../utils/navidad';
 const BASE_URL = import.meta.env.BASE_URL;
 
 // VARIABLE DE DESCUENTO GLOBAL (ej: 0.15 = 15%). Pon 0 para desactivar.
-const GLOBAL_DISCOUNT_RATE = 0.0;
+const GLOBAL_DISCOUNT_RATE = 0.20;
 
 // ARTÍCULOS QUE REQUIEREN COTIZACIÓN DE ENVÍO MANUAL
 const RESTRICTED_ITEMS = [123, 122, 124];
@@ -178,8 +178,11 @@ const CartDrawer = () => {
     setDiscountError('');
     try {
       const code = discountCode.trim().toUpperCase();
-      if (code === 'VETC20A1' && itemsTotal < 4000) {
-        setDiscountError(`El código ${code} requiere un mínimo de $4000.00 MXN en artículos. Te faltan $${(4000 - itemsTotal).toFixed(2)} MXN.`);
+      // El mínimo se evalúa sobre el total CON derecho a descuento:
+      // la Caja navideña NUNCA cuenta para los códigos, porque no se
+      // le puede aplicar ningún descuento (sus $1000 no suman aquí).
+      if (code === 'VETC20A1' && discountableTotal < 4000) {
+        setDiscountError(`El código ${code} requiere un mínimo de $4000.00 MXN en artículos con descuento. Te faltan $${(4000 - discountableTotal).toFixed(2)} MXN.`);
         setAppliedDiscount(null);
         return;
       }
