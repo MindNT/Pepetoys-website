@@ -14,6 +14,17 @@ const ProductCardNavidenos = ({ product, onOpenModal, onQuickAdd, isAdded }) => 
             {/* Festive top strip */}
             <div className="absolute top-0 left-0 right-0 h-[6px] bg-gradient-to-r from-[#A81212] via-[#FFD700] to-[#166534] z-10" />
 
+            {/* "Nuevo" ribbon — productos marcados con apply_promotions = 1 */}
+            {Number(product.apply_promotions) === 1 && (
+                <div className="absolute top-0 left-0 z-10 w-[110px] h-[110px] overflow-hidden pointer-events-none">
+                    <div className="absolute top-[20px] left-[-38px] w-[140px] rotate-[-45deg] bg-gradient-to-r from-[#c40d29] via-[#f4253f] to-[#c40d29] py-[5px] text-center shadow-[0_2px_6px_rgba(0,0,0,0.35)]">
+                        <span className="font-['Inter'] font-extrabold text-[10px] sm:text-[11px] tracking-[0.18em] text-white uppercase drop-shadow-sm">
+                            Nuevo
+                        </span>
+                    </div>
+                </div>
+            )}
+
             {/* Decorative snowflakes */}
             <Snowflake size={16} className="absolute top-4 left-3 text-[#A81212]/25 pointer-events-none z-10" />
             <Snowflake size={12} className="absolute bottom-24 right-4 text-[#A81212]/20 pointer-events-none z-10 animate-pulse" />

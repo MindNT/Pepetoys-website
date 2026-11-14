@@ -109,6 +109,7 @@ const CategoryPage = () => {
                         available_days: item.available_days,
                         atributo_1: item.atributo_1,
                         atributo_2: item.atributo_2,
+                        apply_promotions: item.apply_promotions,
                         category_id: item.category_id,
                         category_ids: Array.isArray(item.category_ids) ? item.category_ids : (item.category_id ? [item.category_id] : [])
                     };
@@ -168,8 +169,12 @@ const CategoryPage = () => {
         p.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // Los artículos Navideños van primero; la "Caja navideña" va de primero de todos
+    // Los productos con apply_promotions = 1 van de primero de todos;
+    // después los artículos Navideños; la "Caja navideña" va primero de esos
     const sortedProducts = [...filteredProducts].sort((a, b) => {
+        const aPromo = Number(a.apply_promotions) === 1 ? 0 : 1;
+        const bPromo = Number(b.apply_promotions) === 1 ? 0 : 1;
+        if (aPromo !== bPromo) return aPromo - bPromo;
         const aCaja = isCajaNavidena(a) ? 0 : 1;
         const bCaja = isCajaNavidena(b) ? 0 : 1;
         if (aCaja !== bCaja) return aCaja - bCaja;

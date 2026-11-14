@@ -11,6 +11,17 @@ const ProductCard = ({ product, onOpenModal, onQuickAdd, isAdded }) => {
     return (
         <div className="w-full h-full bg-[#F8F8F8] rounded-[18px] overflow-hidden flex flex-col relative shadow-sm hover:shadow-lg transition-shadow duration-300 group">
 
+            {/* "Nuevo" ribbon — productos marcados con apply_promotions = 1 */}
+            {Number(product.apply_promotions) === 1 && (
+                <div className="absolute top-0 left-0 z-10 w-[110px] h-[110px] overflow-hidden pointer-events-none">
+                    <div className="absolute top-[20px] left-[-38px] w-[140px] rotate-[-45deg] bg-gradient-to-r from-[#c40d29] via-[#f4253f] to-[#c40d29] py-[5px] text-center shadow-[0_2px_6px_rgba(0,0,0,0.35)]">
+                        <span className="font-['Inter'] font-extrabold text-[10px] sm:text-[11px] tracking-[0.18em] text-white uppercase drop-shadow-sm">
+                            Nuevo
+                        </span>
+                    </div>
+                </div>
+            )}
+
             {/* Quick Add Button */}
             <button
                 onClick={(e) => { e.stopPropagation(); onQuickAdd(product, e); }}
