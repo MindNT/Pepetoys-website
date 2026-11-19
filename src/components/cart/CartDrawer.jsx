@@ -9,7 +9,7 @@ import { isCajaNavidena } from '../../utils/navidad';
 const BASE_URL = import.meta.env.BASE_URL;
 
 // VARIABLE DE DESCUENTO GLOBAL (ej: 0.15 = 15%). Pon 0 para desactivar.
-const GLOBAL_DISCOUNT_RATE = 0.20;
+const GLOBAL_DISCOUNT_RATE = 0.0;
 
 // ARTÍCULOS QUE REQUIEREN COTIZACIÓN DE ENVÍO MANUAL
 const RESTRICTED_ITEMS = [123, 122, 124];
